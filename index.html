@@ -156,24 +156,11 @@
         }
 
         .controls {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            grid-template-areas: "filters search refresh";
+            display: flex;
+            flex-wrap: wrap;
             align-items: center;
             margin-bottom: 2rem;
             gap: 1rem;
-        }
-
-        .filter-buttons {
-            grid-area: filters;
-        }
-
-        .search-box {
-            grid-area: search;
-        }
-
-        .refresh-btn {
-            grid-area: refresh;
         }
 
         .filter-buttons {
@@ -452,31 +439,6 @@
             100% { opacity: 0.6; }
         }
 
-        .refresh-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        .refresh-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-        }
-
-        .refresh-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -492,16 +454,12 @@
             }
 
             .controls {
-                grid-template-columns: 1fr;
-                grid-template-areas: 
-                    "filters"
-                    "search"
-                    "refresh";
-                gap: 1rem;
+                flex-direction: column;
+                align-items: stretch;
             }
             
-            .refresh-btn {
-                margin-top: 1rem;
+            .filter-buttons {
+                justify-content: center;
             }
 
             .search-box {
@@ -572,11 +530,6 @@
                 padding: 0.6rem;
             }
 
-            .refresh-btn {
-                padding: 0.6rem 1rem;
-                font-size: 0.9rem;
-            }
-
             .debug-btn {
                 font-size: 0.75rem;
                 padding: 0.4rem 0.8rem;
@@ -621,7 +574,6 @@
                 <button class="filter-btn" data-filter="saved">Saved Only</button>
             </div>
             <input type="text" class="search-box" placeholder="Search articles..." id="search-input" autocomplete="off">
-            <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">🔄 Refresh Articles</button>
         </div>
 
         <div class="articles-grid" id="articles-container">
@@ -653,8 +605,7 @@
         let savedArticles = new Set();
         let currentFilter = 'all';
         let searchQuery = '';
-        let lastArticleLoadTime = null;
-        let isInitialLoad = true;
+        let lastScrapedAt = null;
 
         function debugLog(message) {
             console.log(message);
@@ -702,7 +653,7 @@
             }
             
             renderArticles();
-            updateStats(false); // Don't update timestamp when saving articles
+            updateStats();
         }
 
         // Load articles - Supabase as primary source, local files as fallback
@@ -735,14 +686,13 @@
                     });
                     
                     renderArticles();
-                    // Only update timestamp on initial load, not browser refresh
-                    updateStats(isInitialLoad);
+                    updateStats();
             } else {
                 // If no articles loaded, show empty state
                 debugLog('No articles available');
                 articles = [];
                 renderArticles();
-                updateStats(isInitialLoad);
+                updateStats();
             }
             } catch (error) {
                 debugLog(`Error loading articles: ${error}`);
@@ -764,6 +714,9 @@
                     if (result.articles.length > 0) {
                         debugLog(`First article date: ${result.articles[0]?.published_at}`);
                     }
+                    // Store last scraped time from API
+                    lastScrapedAt = result.last_scraped_at;
+                    debugLog(`Last scraped: ${lastScrapedAt}`);
                     return result.articles;
                 } else {
                     debugLog(`API proxy failed: ${response.status} ${response.statusText}`);
@@ -824,7 +777,7 @@
         }
 
         // Update statistics
-        function updateStats(updateTimestamp = false) {
+        function updateStats() {
             // Simple date string comparison (YYYY-MM-DD)
             const todayStr = new Date().toISOString().split('T')[0];
             debugLog(`Today date string: ${todayStr}`);
@@ -848,21 +801,15 @@
             document.getElementById('new-today').textContent = todayArticles.length;
             document.getElementById('saved-count').textContent = savedArticles.size;
             
-            // Update timestamp only when articles are loaded/refreshed
-            if (updateTimestamp) {
-                const now = new Date();
-                lastArticleLoadTime = now;
-                // Format as UTC time in 24-hour format without seconds
-                const hours = now.getUTCHours().toString().padStart(2, '0');
-                const minutes = now.getUTCMinutes().toString().padStart(2, '0');
+            // Display last scraped time from database
+            if (lastScrapedAt) {
+                const date = new Date(lastScrapedAt);
+                const hours = date.getUTCHours().toString().padStart(2, '0');
+                const minutes = date.getUTCMinutes().toString().padStart(2, '0');
                 const timeStr = `${hours}:${minutes} UTC`;
                 document.getElementById('last-updated').textContent = timeStr;
-            } else if (lastArticleLoadTime) {
-                // Keep showing the last load time
-                const hours = lastArticleLoadTime.getUTCHours().toString().padStart(2, '0');
-                const minutes = lastArticleLoadTime.getUTCMinutes().toString().padStart(2, '0');
-                const timeStr = `${hours}:${minutes} UTC`;
-                document.getElementById('last-updated').textContent = timeStr;
+            } else {
+                document.getElementById('last-updated').textContent = 'Never';
             }
         }
 
@@ -879,71 +826,6 @@
                 month: 'short', 
                 day: 'numeric' 
             });
-        }
-
-        // Refresh data by reloading articles from Supabase
-        async function refreshData() {
-            const btn = document.querySelector('.refresh-btn');
-            btn.disabled = true;
-            btn.textContent = 'Checking for updates...';
-            
-            try {
-                // Show loading state
-                document.getElementById('articles-container').innerHTML = `
-                    <div class="skeleton-loader">
-                        <div class="skeleton-card">
-                            <div class="skeleton-line short"></div>
-                            <div class="skeleton-line medium"></div>
-                            <div class="skeleton-line long"></div>
-                            <div class="skeleton-line short"></div>
-                        </div>
-                        <div class="skeleton-card">
-                            <div class="skeleton-line short"></div>
-                            <div class="skeleton-line medium"></div>
-                            <div class="skeleton-line long"></div>
-                            <div class="skeleton-line short"></div>
-                        </div>
-                        <div class="skeleton-card">
-                            <div class="skeleton-line short"></div>
-                            <div class="skeleton-line medium"></div>
-                            <div class="skeleton-line long"></div>
-                            <div class="skeleton-line short"></div>
-                        </div>
-                    </div>
-                `;
-                
-                console.log('🔃 Refresh initiated: Checking Supabase for new articles...');
-                
-                // On Vercel, we can't trigger scraping - just search Supabase
-                btn.textContent = 'Searching Articles...';
-                console.log('🔍 Searching Supabase for new articles...');
-                
-                // Reload articles from Supabase
-                btn.textContent = 'Loading articles...';
-                // Force update timestamp for manual refresh
-                await loadArticles();
-                updateStats(true);
-                
-                // Check if we got any new articles
-                const articleCount = articles.length;
-                if (articleCount > 0) {
-                    btn.textContent = `✅ ${articleCount} articles loaded`;
-                } else {
-                    btn.textContent = '✅ Search complete';
-                }
-                
-                setTimeout(() => {
-                    btn.textContent = '🔄 Refresh Articles';
-                    btn.disabled = false;
-                }, 3000);
-            } catch (error) {
-                console.log(`Refresh error: ${error}`);
-                btn.textContent = '🔄 Try Again';
-                setTimeout(() => {
-                    btn.textContent = '🔄 Refresh Articles';
-                    btn.disabled = false;
-                }, 2000);
-            }
         }
         
         // Initialize
@@ -974,9 +856,6 @@
                     renderArticles();
                 });
             });
-            
-            // Mark initial load complete
-            isInitialLoad = false;
         });
     </script>
 </body>

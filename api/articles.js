@@ -14,7 +14,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const url = `${supabaseUrl}/rest/v1/articles?select=*&order=published_at.desc`;
+    const articlesUrl = `${supabaseUrl}/rest/v1/articles?select=*&order=published_at.desc`;
+    const metadataUrl = `${supabaseUrl}/rest/v1/scraper_metadata?select=last_scraped_at&source=eq.all&limit=1`;
     
     const options = {
       headers: {
@@ -24,23 +25,29 @@ module.exports = async (req, res) => {
       }
     };
 
-    const articles = await new Promise((resolve, reject) => {
-      https.get(url, options, (response) => {
-        let data = '';
-        
-        response.on('data', (chunk) => {
-          data += chunk;
-        });
-        
-        response.on('end', () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch (e) {
-            reject(new Error('Failed to parse response'));
-          }
-        });
-      }).on('error', reject);
-    });
+    const [articlesResponse, metadataResponse] = await Promise.all([
+      new Promise((resolve, reject) => {
+        https.get(articlesUrl, options, (response) => {
+          let data = '';
+          response.on('data', (chunk) => data += chunk);
+          response.on('end', () => {
+            try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+          });
+        }).on('error', reject);
+      }),
+      new Promise((resolve, reject) => {
+        https.get(metadataUrl, options, (response) => {
+          let data = '';
+          response.on('data', (chunk) => data += chunk);
+          response.on('end', () => {
+            try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+          });
+        }).on('error', reject);
+      })
+    ]);
+
+    const articles = articlesResponse;
+    const metadata = metadataResponse[0] || null;
 
     const processedArticles = articles.map(article => ({
       id: article.id,
@@ -59,7 +66,8 @@ module.exports = async (req, res) => {
     res.status(200).json({ 
       success: true, 
       articles: processedArticles,
-      count: processedArticles.length 
+      count: processedArticles.length,
+      last_scraped_at: metadata?.last_scraped_at || null
     });
 
   } catch (error) {
