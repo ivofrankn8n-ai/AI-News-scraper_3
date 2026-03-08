@@ -194,6 +194,37 @@
             color: var(--text);
         }
 
+        .time-filter {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 2rem;
+            padding: 0.5rem 1rem;
+            color: var(--text);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            width: 180px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%2394a3b8' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem top 50%;
+            background-size: 0.65rem auto;
+        }
+
+        .time-filter:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .time-filter:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
         .search-box {
             background: var(--glass-bg) !important;
             border: 1px solid var(--glass-border);
@@ -573,6 +604,22 @@
                 <button class="filter-btn" data-filter="ai_rundown">AI Rundown</button>
                 <button class="filter-btn" data-filter="saved">Saved Only</button>
             </div>
+            <select class="time-filter" id="time-filter">
+                <option value="all">All Time</option>
+                <option value="6h">Last 6 Hours</option>
+                <option value="1day">Last 24 Hours</option>
+                <option value="2days">Last 2 Days</option>
+                <option value="3days">Last 3 Days</option>
+                <option value="1week">Last Week</option>
+                <option value="2weeks">Last 2 Weeks</option>
+                <option value="3weeks">Last 3 Weeks</option>
+                <option value="1month">Last Month</option>
+                <option value="2months">Last 2 Months</option>
+                <option value="3months">Last 3 Months</option>
+                <option value="6months">Last 6 Months</option>
+                <option value="1year">Last Year</option>
+                <option value="today">Today Only</option>
+            </select>
             <input type="text" class="search-box" placeholder="Search articles..." id="search-input" autocomplete="off">
         </div>
 
@@ -657,13 +704,13 @@
         }
 
         // Load articles - Supabase as primary source, local files as fallback
-        async function loadArticles() {
+        async function loadArticles(timeFilter = 'all') {
             try {
-                debugLog('Starting article loading...');
+                debugLog(`Starting article loading with time filter: ${timeFilter}...`);
                 
                 // Primary source: Supabase
                 debugLog('Loading from Supabase (primary source)...');
-                let loadedArticles = await loadFromSupabase();
+                let loadedArticles = await loadFromSupabase(timeFilter);
                 debugLog(`Supabase returned: ${loadedArticles ? loadedArticles.length : 'null'} articles`);
                 
                 // Only show error if Supabase fails completely
@@ -701,12 +748,13 @@
         }
 
         // Load articles from local API proxy (which connects to Supabase server-side)
-        async function loadFromSupabase() {
+        async function loadFromSupabase(timeFilter = 'all') {
             try {
-                debugLog('Loading articles from local API proxy...');
+                debugLog(`Loading articles from local API proxy with time filter: ${timeFilter}...`);
                 
                 // Call local Vercel API function (solves CORB issues)
-                const response = await fetch('/api/articles');
+                const url = timeFilter === 'all' ? '/api/articles' : `/api/articles?timeFilter=${timeFilter}`;
+                const response = await fetch(url);
                 
                 if (response.ok) {
                     const result = await response.json();
@@ -835,8 +883,17 @@
             
             // Load articles immediately on page load with a small delay to ensure Supabase client is ready
             setTimeout(() => {
-                loadArticles();
+                loadArticles('all');
             }, 100);
+            
+            // Time filter
+            document.getElementById('time-filter').addEventListener('change', (e) => {
+                const timeFilter = e.target.value;
+                debugLog(`Time filter changed to: ${timeFilter}`);
+                
+                // Reload articles with the new time filter
+                loadArticles(timeFilter);
+            });
             
             // Search input
             document.getElementById('search-input').addEventListener('input', (e) => {

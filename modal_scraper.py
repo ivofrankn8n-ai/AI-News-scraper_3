@@ -17,7 +17,11 @@ image = (
     .pip_install("requests", "beautifulsoup4", "python-dotenv", "httpx")
 )
 
-@app.function(image=image, schedule=modal.Cron("0 */3 * * *"))  # Every 3 hours
+@app.function(
+    image=image, 
+    schedule=modal.Cron("0 */3 * * *"),  # Every 3 hours
+    secrets=[modal.Secret.from_name("supabase-secret")]
+)
 def scrape_articles():
     """
     Scheduled function that runs every 3 hours.
@@ -52,9 +56,10 @@ def scrape_articles():
     articles_scraped = 0
     
     # --- Scrape Ben's Bytes ---
+    ben_bytes_count = 0
     try:
         print("Scraping Ben's Bytes...")
-        response = session.get('https://bensbites.substack.com/feed')
+        response = session.get('https://www.bensbites.com/feed')
         response.raise_for_status()
         
         root = ET.fromstring(response.content)
@@ -66,15 +71,22 @@ def scrape_articles():
                 pub_date = item.find('pubDate').text
                 description = item.find('description').text or ""
                 
-                # Parse date
-                published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
-                published_at = published_at.isoformat()
+                # Parse date - handle both with and without timezone
+                try:
+                    published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
+                except ValueError:
+                    # Try parsing without timezone
+                    published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S GMT')
+                    # Add UTC timezone
+                    published_at = published_at.replace(tzinfo=datetime.now().astimezone().tzinfo)
                 
-                # Check if already today
-                if 'T' in published_at:
-                    date_part = published_at.split('T')[0]
-                    if date_part != datetime.now().strftime('%Y-%m-%d'):
-                        continue  # Skip articles not from today
+                # Check if from today (UTC calendar date)
+                from datetime import timezone
+                utc_now = datetime.now(timezone.utc)
+                if published_at.astimezone(timezone.utc).date() != utc_now.date():
+                    continue  # Skip articles not from today
+                
+                published_at = published_at.isoformat()
                 
                 # Generate unique ID
                 article_id = hashlib.md5(f"{title}{link}".encode()).hexdigest()
@@ -95,119 +107,115 @@ def scrape_articles():
                 resp = requests.post(url, json=article_data, headers=headers)
                 
                 if resp.status_code in [200, 201]:
-                    articles_scraped += 1
-                    print(f"  ✓ Added: {title[:50]}...")
+                    ben_bytes_count += 1
+                    print(f"  [+] Added: {title[:50]}...")
                 elif resp.status_code == 409:
-                    print(f"  - Already exists: {title[:50]}")
+                    print(f"  [-] Already exists: {title[:50]}")
                 else:
-                    print(f"  ✗ Error: {resp.status_code} - {resp.text[:100]}")
+                    print(f"  [-] Error: {resp.status_code} - {resp.text[:100]}")
                     
             except Exception as e:
-                print(f"  ✗ Error processing item: {e}")
+                print(f"  [-] Error processing item: {e}")
                 continue
                 
-        print(f"Ben's Bytes: {articles_scraped} articles processed")
+        print(f"Ben's Bytes: {ben_bytes_count} articles processed")
+        articles_scraped += ben_bytes_count
         
     except Exception as e:
         print(f"Error scraping Ben's Bytes: {e}")
     
     # --- Scrape AI Rundown ---
-    try:
-        print("Scraping AI Rundown...")
-        response = session.get('https://www.therundown.ai/sitemap.xml')
-        response.raise_for_status()
-        
-        root = ET.fromstring(response.content)
-        
-        ai_rundown_count = 0
-        
-        # Get last 20 URLs from sitemap
-        urls = []
-        for url in root.findall('.//url')[:20]:
-            loc = url.find('loc')
-            if loc is not None:
-                urls.append(loc.text)
-        
-        for article_url in urls:
-            try:
-                # Fetch article page
-                article_resp = session.get(article_url)
-                if article_resp.status_code != 200:
-                    continue
-                
-                from bs4 import BeautifulSoup
-                soup = BeautifulSoup(article_resp.text, 'html.parser')
-                
-                # Extract title
-                title_tag = soup.find('title')
-                title = title_tag.text if title_tag else "AI Rundown Article"
-                
-                # Extract description from meta tags
-                desc_tag = soup.find('meta', attrs={'name': 'description'})
-                description = desc_tag.get('content', '') if desc_tag else ""
-                
-                # Generate ID
-                article_id = hashlib.md5(f"{title}{article_url}".encode()).hexdigest()
-                
-                # Use current time for published_at
-                published_at = datetime.now().isoformat()
-                
-                article_data = {
-                    "id": article_id,
-                    "title": title,
-                    "url": article_url,
-                    "summary": description[:500] if description else "",
-                    "source": "ai_rundown",
-                    "author": "The Rundown AI",
-                    "published_at": published_at,
-                    "category": "AI News"
-                }
-                
-                url = f"{supabase_url}/rest/v1/articles"
-                resp = requests.post(url, json=article_data, headers=headers)
-                
-                if resp.status_code in [200, 201]:
-                    ai_rundown_count += 1
-                    print(f"  ✓ Added: {title[:50]}...")
-                elif resp.status_code == 409:
-                    print(f"  - Already exists: {title[:50]}")
-                else:
-                    print(f"  ✗ Error: {resp.status_code}")
+    ai_rundown_count = 0
+    max_retries = 3
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"Scraping AI Rundown (attempt {attempt + 1}/{max_retries})...")
+            response = session.get('https://therundown.substack.com/feed', timeout=30)
+            response.raise_for_status()
+            
+            root = ET.fromstring(response.content)
+            
+            for item in root.findall('.//item'):
+                try:
+                    title = item.find('title').text
+                    link = item.find('link').text
+                    pub_date = item.find('pubDate').text
+                    description = item.find('description').text or ""
                     
-            except Exception as e:
-                print(f"  ✗ Error processing article: {e}")
-                continue
-        
-        print(f"AI Rundown: {ai_rundown_count} articles processed")
-        articles_scraped += ai_rundown_count
-        
-    except Exception as e:
-        print(f"Error scraping AI Rundown: {e}")
+                    # Parse date - handle both with and without timezone
+                    try:
+                        published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
+                    except ValueError:
+                        # Try parsing without timezone
+                        published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S GMT')
+                        # Add UTC timezone
+                        published_at = published_at.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                    
+                    # Check if from today (UTC calendar date)
+                    from datetime import timezone
+                    utc_now = datetime.now(timezone.utc)
+                    if published_at.astimezone(timezone.utc).date() != utc_now.date():
+                        continue  # Skip articles not from today
+                    
+                    published_at = published_at.isoformat()
+                    
+                    # Generate unique ID
+                    article_id = hashlib.md5(f"{title}{link}".encode()).hexdigest()
+                    
+                    # Upsert article
+                    article_data = {
+                        "id": article_id,
+                        "title": title,
+                        "url": link,
+                        "summary": description[:500] if description else "",
+                        "source": "ai_rundown",
+                        "author": "The Rundown AI",
+                        "published_at": published_at,
+                        "category": "AI News"
+                    }
+                    
+                    url = f"{supabase_url}/rest/v1/articles"
+                    resp = requests.post(url, json=article_data, headers=headers)
+                    
+                    if resp.status_code in [200, 201]:
+                        ai_rundown_count += 1
+                        print(f"  [+] Added: {title[:50]}...")
+                    elif resp.status_code == 409:
+                        print(f"  [-] Already exists: {title[:50]}")
+                    else:
+                        print(f"  [-] Error: {resp.status_code}")
+                        
+                except Exception as e:
+                    print(f"  [-] Error processing item: {e}")
+                    continue
+            
+            print(f"AI Rundown: {ai_rundown_count} articles processed")
+            articles_scraped += ai_rundown_count
+            break  # Success, exit retry loop
+            
+        except Exception as e:
+            print(f"Error scraping AI Rundown (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print("Retrying in 5 seconds...")
+                import time
+                time.sleep(5)
+            else:
+                print("Max retries reached, skipping AI Rundown for this run")
     
     # --- Update scraper metadata ---
     try:
         print("Updating scraper metadata...")
         metadata_url = f"{supabase_url}/rest/v1/scraper_metadata?source=eq.all"
         
-        # First try to update
+        # Try to update existing record
         update_data = {"last_scraped_at": datetime.now().isoformat()}
         resp = requests.patch(metadata_url, json=update_data, headers=headers)
         
         if resp.status_code == 200:
-            print("✓ Metadata updated")
+            print("[+] Metadata updated")
         else:
-            # If no row exists, insert one
-            insert_headers = headers.copy()
-            insert_headers["Prefer"] = "return=representation"
-            insert_resp = requests.post(
-                f"{supabase_url}/rest/v1/scraper_metadata",
-                json={"source": "all", "last_scraped_at": datetime.now().isoformat()},
-                headers=insert_headers
-            )
-            if insert_resp.status_code in [200, 201]:
-                print("✓ Metadata created")
-            else:
-                print(f"  ✗ Metadata error: {insert_resp.status_code}")
+            print(f"  [-] Metadata update failed: {resp.status_code}")
                 
     except Exception as e:
         print(f"Error updating metadata: {e}")
