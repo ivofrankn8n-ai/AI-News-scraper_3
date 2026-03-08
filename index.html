@@ -626,7 +626,6 @@
             }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Set Supabase credentials from environment variables
         // On Vercel, these should be set as environment variables
@@ -768,7 +767,7 @@
         }
 
         async function testSupabaseConnection() {
-            debugLog('Testing Supabase connection...');
+            debugLog('Testing Supabase connection via REST API...');
             const supabaseUrl = window.SUPABASE_URL;
             const supabaseKey = window.SUPABASE_ANON_KEY;
             
@@ -777,34 +776,32 @@
                 return false;
             }
             
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-            
             try {
-                const { data, error } = await supabase
-                    .from('articles')
-                    .select('*')
-                    .order('published_at', { ascending: false })
-                    .limit(5);
+                const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*&limit=5&order=published_at.desc`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                if (error) {
-                    debugLog(`❌ Supabase error: ${error.message}`);
-                    return false;
-                }
-                
-                if (data && data.length > 0) {
-                    debugLog(`✓ Supabase success: ${data.length} articles`);
-                    debugLog(`First article: ${data[0].title.substring(0, 50)}...`);
-                    debugLog(`First article date: ${data[0].published_at}`);
-                    
-                    // Test today count
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const todayCount = data.filter(article => 
-                        article.published_at.split('T')[0] === todayStr
-                    ).length;
-                    debugLog(`Articles from today: ${todayCount}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    debugLog(`✓ Supabase REST API success: ${data.length} articles`);
+                    if (data.length > 0) {
+                        debugLog(`First article: ${data[0].title.substring(0, 50)}...`);
+                        debugLog(`First article date: ${data[0].published_at}`);
+                        
+                        // Test today count
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const todayCount = data.filter(article => 
+                            article.published_at.split('T')[0] === todayStr
+                        ).length;
+                        debugLog(`Articles from today: ${todayCount}`);
+                    }
                     return true;
                 } else {
-                    debugLog('Supabase returned no articles');
+                    debugLog(`❌ REST API failed: ${response.status} ${response.statusText}`);
                     return false;
                 }
             } catch (error) {
@@ -892,7 +889,7 @@
             }
         }
 
-        // Load articles from Supabase using direct REST API (fallback if Supabase client fails)
+        // Load articles from Supabase using direct REST API only
         async function loadFromSupabase() {
             try {
                 // Get Supabase credentials from environment or use defaults
@@ -906,95 +903,23 @@
                     return null;
                 }
                 
-                debugLog(`Connecting to Supabase: ${supabaseUrl}`);
+                debugLog(`Connecting to Supabase via REST API: ${supabaseUrl}`);
                 
-                // Try using direct REST API first (more reliable)
-                try {
-                    debugLog('Attempting direct REST API call...');
-                    const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*&order=published_at.desc`, {
-                        headers: {
-                            'apikey': supabaseKey,
-                            'Authorization': `Bearer ${supabaseKey}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        debugLog(`✓ Loaded ${data.length} articles via REST API`);
+                // Use direct REST API call (most reliable)
+                const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*&order=published_at.desc`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    debugLog(`✓ Loaded ${data.length} articles via REST API`);
+                    if (data.length > 0) {
                         debugLog(`First article date: ${data[0]?.published_at}`);
-                        
-                        // Transform Supabase data to match our expected format
-                        return data.map(article => ({
-                            id: article.id,
-                            title: article.title,
-                            source: article.source,
-                            url: article.url,
-                            summary: article.subtitle || article.summary || '',
-                            published_at: article.published_at,
-                            category: article.category || 'AI News',
-                            author: article.author || 'Unknown',
-                            image_url: article.image_url || '',
-                            is_saved: false // Will be updated from localStorage
-                        }));
-                    } else {
-                        debugLog(`REST API failed: ${response.status} ${response.statusText}`);
-                        // Fall back to Supabase client
                     }
-                } catch (restError) {
-                    debugLog(`REST API error: ${restError}`);
-                    // Fall back to Supabase client
-                }
-                
-                // Fallback: Use Supabase client if REST API fails
-                debugLog('Falling back to Supabase client...');
-                
-                // Check if Supabase client is available - wait a bit if not
-                if (!window.supabase || !window.supabase.createClient) {
-                    debugLog('Supabase client not loaded yet, waiting...');
-                    // Wait for Supabase library to load
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    // Check again
-                    if (!window.supabase || !window.supabase.createClient) {
-                        debugLog('❌ Supabase client still not loaded after waiting');
-                        showError('Supabase client failed to load. Please refresh the page.');
-                        return null;
-                    }
-                }
-                
-                const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                
-                // Add timeout for Supabase request
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Supabase request timeout')), 10000)
-                );
-                
-                const supabasePromise = supabase
-                    .from('articles')
-                    .select('*')
-                    .order('published_at', { ascending: false });
-                
-                const { data, error } = await Promise.race([supabasePromise, timeoutPromise]);
-                
-                if (error) {
-                    debugLog(`Supabase error: ${error.message}`);
-                    debugLog(`Supabase error details: ${JSON.stringify(error)}`);
-                    // Check if it's a CORS error
-                    if (error.message.includes('CORS') || error.message.includes('Origin') || error.message.includes('cross-origin')) {
-                        debugLog('CORS error detected - Supabase may not be configured for this domain');
-                        showError('CORS error: Supabase may not be configured for this domain. Please check Supabase CORS settings.');
-                    } else {
-                        showError(`Supabase connection failed: ${error.message}`);
-                    }
-                    return null;
-                }
-                
-                debugLog(`Supabase response: data=${data ? data.length : 'null'}, error=${error ? 'yes' : 'no'}`);
-                
-                if (data && data.length > 0) {
-                    debugLog(`✓ Loaded ${data.length} articles from Supabase`);
-                    debugLog(`First article date: ${data[0]?.published_at}`);
                     
                     // Transform Supabase data to match our expected format
                     return data.map(article => ({
@@ -1009,12 +934,14 @@
                         image_url: article.image_url || '',
                         is_saved: false // Will be updated from localStorage
                     }));
+                } else {
+                    debugLog(`REST API failed: ${response.status} ${response.statusText}`);
+                    showError(`Supabase connection failed: ${response.status} ${response.statusText}`);
+                    return null;
                 }
-                
-                debugLog('Supabase returned empty dataset');
-                return [];
             } catch (error) {
                 debugLog(`❌ Supabase connection failed: ${error}`);
+                showError(`Supabase connection failed: ${error.message}`);
                 return null;
             }
         }
