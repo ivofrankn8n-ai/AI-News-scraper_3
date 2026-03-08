@@ -9,6 +9,7 @@ import json
 import os
 import hashlib
 from datetime import datetime
+from dotenv import load_dotenv
 
 class SimpleSupabaseClient:
     def __init__(self):
@@ -127,6 +128,11 @@ def test_connection():
         return False
 
 if __name__ == "__main__":
+    # Load environment variables from .env file
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(project_root, '.env')
+    load_dotenv(env_path)
+    
     # Test the connection
     if test_connection():
         print("Simple Supabase client is working correctly!")

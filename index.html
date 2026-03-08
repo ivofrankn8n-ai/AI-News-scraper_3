@@ -1102,7 +1102,7 @@
                 try {
                     // This will only work in local development environment
                     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        btn.textContent = 'Running scrapers...';
+                        btn.textContent = 'Searching Articles...';
                         const response = await fetch('/api/refresh', {
                             method: 'POST'
                         });

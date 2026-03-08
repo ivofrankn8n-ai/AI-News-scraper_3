@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 import time
 import sys
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
 
 # Add parent directory to path for absolute imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -54,7 +55,7 @@ class NewsletterScraperSupabase:
             articles = []
             
             # Parse RSS items
-            for item in root.findall('.//item')[:10]:  # Limit to 10 latest
+            for item in root.findall('.//item')[:25]:  # Increased limit to 25 articles
                 article = self._parse_rss_item(item, 'bens_bites')
                 if article:
                     articles.append(article)
@@ -85,8 +86,8 @@ class NewsletterScraperSupabase:
                 if loc is not None and '/p/' in loc.text:
                     article_urls.append(loc.text)
             
-            # Get latest 10 articles
-            for url in article_urls[:10]:
+            # Get latest articles
+            for url in article_urls[:15]:  # Increased limit to 15 articles
                 article = self._scrape_ai_rundown_article(url)
                 if article:
                     articles.append(article)
@@ -105,18 +106,60 @@ class NewsletterScraperSupabase:
             response = self.session.get(url)
             response.raise_for_status()
             
-            # Basic article info from URL
+            # Parse HTML content
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Extract title from page title or h1
+            title = soup.find('title')
+            title_text = title.get_text().strip() if title else 'AI Rundown Article'
+            
+            # Remove site name from title if present
+            if ' - The Rundown AI' in title_text:
+                title_text = title_text.replace(' - The Rundown AI', '')
+            
+            # Extract summary from meta description or first paragraph
+            meta_description = soup.find('meta', attrs={'name': 'description'})
+            summary_text = ''
+            
+            if meta_description and meta_description.get('content'):
+                summary_text = meta_description['content'].strip()
+            else:
+                # Fallback: get first paragraph
+                first_paragraph = soup.find('p')
+                if first_paragraph:
+                    summary_text = first_paragraph.get_text().strip()
+                else:
+                    summary_text = 'Latest AI news from The AI Rundown'
+            
+            # Extract publication date from meta tags or article content
+            published_at = datetime.now().isoformat()
+            
+            # Look for date in meta tags
+            meta_date = soup.find('meta', attrs={'property': 'article:published_time'})
+            if meta_date and meta_date.get('content'):
+                try:
+                    published_at = meta_date['content']
+                except:
+                    pass
+            
+            # Extract author information
+            author = 'The AI Rundown Team'
+            meta_author = soup.find('meta', attrs={'name': 'author'})
+            if meta_author and meta_author.get('content'):
+                author = meta_author['content']
+            
+            # Generate ID from URL
             article_id = self._generate_id(url)
             
             return {
                 'id': article_id,
-                'title': 'AI Rundown Article',  # Would need proper parsing
+                'title': title_text,
                 'source': 'ai_rundown',
                 'url': url,
-                'summary': 'Latest AI news from The AI Rundown',
-                'published_at': datetime.now().isoformat(),
+                'summary': summary_text[:200] + '...' if len(summary_text) > 200 else summary_text,
+                'published_at': published_at,
                 'category': 'AI News',
-                'author': 'The AI Rundown Team',
+                'author': author,
                 'image_url': ''
             }
             
@@ -266,8 +309,8 @@ class NewsletterScraperSupabase:
         # Combine articles
         all_articles = bens_articles + ai_rundown_articles
         
-        # Filter recent articles (last 6 hours to avoid duplicates)
-        recent_articles = self.filter_recent_articles(all_articles, hours=6)
+        # Filter recent articles (last 2 hours to avoid duplicates)
+        recent_articles = self.filter_recent_articles(all_articles, hours=2)
         
         print(f"Total recent articles: {len(recent_articles)}")
         
