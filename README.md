@@ -1,130 +1,76 @@
-# AI News Dashboard 🤖
+# AI News Dashboard
 
-A beautiful, interactive dashboard that aggregates and displays the latest AI articles from top newsletters including Ben's Bytes and The AI Rundown.
+A production-ready AI news dashboard that displays articles from Supabase cloud database.
+
+## Live Dashboard
+
+**URL**: https://ai-news-scraper-3.vercel.app
 
 ## Features
 
-✨ **Beautiful Design**: Modern glassmorphism design with gradient background  
-📰 **Multi-Source Aggregation**: Scrapes articles from Ben's Bytes and The AI Rundown  
-💾 **Persistent Storage**: Saved articles persist across browser sessions  
-🔍 **Search & Filter**: Filter by source or search through article content  
-📱 **Responsive Design**: Works perfectly on desktop and mobile  
-🔄 **Auto-Refresh**: 24-hour refresh cycle (manual refresh available)  
-🎯 **Stable Layout**: No layout shifts or visual jumps during interactions  
+- **Real-time articles** from Supabase database
+- **Today filtering** - shows only today's articles
+- **Search & Filter** - filter by source (Ben's Bytes, AI Rundown) or saved articles
+- **Save articles** - persists in localStorage
+- **Refresh** - manually refresh articles with "Searching Articles" status
+- **Responsive** - works on desktop and mobile
 
-## Quick Start
+## Architecture
 
-1. **Run the pipeline** to fetch latest articles:
-   ```bash
-   python tools/run_pipeline.py
-   ```
-
-2. **Start the dashboard server**:
-   ```bash
-   python serve.py
-   ```
-
-3. **Open your browser** to `http://localhost:8000/`
-
-Or use the batch file:
-```bash
-run.bat
+```
+Browser → Vercel (API Proxy) → Supabase Database
+         ↓
+      Static HTML/CSS/JS
 ```
 
 ## Project Structure
 
 ```
 AI_NEWS-3/
-├── index.html              # Main dashboard interface
-├── serve.py               # Local development server
-├── run.bat                # Windows batch runner
-├── model.md               # Project constitution & data schema
-├── task_plan.md           # B.L.A.S.T. phases & progress
-├── findings.md            # Research & technical learnings
-├── progress.md            # Implementation progress
-├── .env                   # Environment variables template
-├── architecture/          # Technical SOPs & architecture
-├── tools/                 # Python scripts & utilities
-│   ├── scrapers/         # Newsletter scraping logic
-│   ├── processors/       # Data normalization
-│   └── storage/          # Local storage management
-└── .tmp/                 # Temporary data storage
+├── index.html              # Dashboard frontend
+├── api/
+│   └── articles.js        # Serverless API proxy
+├── vercel.json            # Vercel configuration
+├── .env                   # Environment variables
+└── *.md                   # Documentation
 ```
-
-## B.L.A.S.T. Master System Implementation
-
-This project follows the B.L.A.S.T. Master System Protocol:
-
-### Phase 1: B - Blueprint ✅
-- Defined project scope and data schemas
-- Identified newsletter sources and integrations
-
-### Phase 2: L - Link ✅
-- Verified connectivity to newsletter APIs/RSS feeds
-- Built reliable scraping infrastructure
-
-### Phase 3: A - Architect ✅
-- Created 3-layer architecture (SOPs → Navigation → Tools)
-- Implemented deterministic Python scripts
-
-### Phase 4: S - Stylize ✅
-- Designed beautiful, interactive dashboard
-- Implemented professional UI/UX
-
-### Phase 5: T - Trigger ✅ COMPLETED
-- Dashboard fully polished and stable
-- Layout shift issues resolved
-- Production-ready design
-
-## Data Flow
-
-1. **Scraping**: Python scripts fetch articles from RSS feeds and websites
-2. **Processing**: Data is normalized and filtered (last 24 hours)
-3. **Storage**: Articles saved to JSON files, saved articles to localStorage
-4. **Display**: Dashboard renders articles with interactive features
-
-## Technical Stack
-
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Backend**: Python 3.x with requests, BeautifulSoup
-- **Storage**: JSON files + localStorage
-- **Styling**: Modern CSS with gradients and animations
-
-## Customization
-
-### Adding New Sources
-1. Add scraper in `tools/scrapers/`
-2. Update data schema in `model.md`
-3. Add source filter in `index.html`
-
-- Modify CSS variables in `index.html`
-- Update card layouts and animations
 
 ## Development
 
-### Running Tests
+### Local Development
+
 ```bash
-python tools/scrapers/newsletter_scraper.py  # Test scraper
-python tools/processors/data_processor.py    # Test processor
-python tools/storage/local_storage.py       # Test storage
+# Start local server
+python serve.py
+
+# Open http://localhost:8000
 ```
 
-### Data Files
-- `.tmp/articles.json`: Raw scraped articles
-- `.tmp/processed_articles.json`: Normalized articles
-- Browser localStorage: Saved article IDs
+### Deployment
 
-## Next Steps
+Changes pushed to GitHub automatically deploy to Vercel.
 
-- [x] Implement automated 24-hour refresh ✅
-- [x] Fix layout shift issues ✅
-- [x] Consolidate dashboard files ✅
-- [x] Polish scrollbar and search interactions ✅
-- [ ] Add Reddit integration
-- [ ] Deploy to cloud platform
-- [ ] Add email notifications
-- [ ] Implement user accounts
+## API
+
+### GET /api/articles
+
+Returns all articles from Supabase.
+
+**Response:**
+```json
+{
+  "success": true,
+  "articles": [...],
+  "count": 35
+}
+```
+
+## Supabase
+
+- **Project**: keajnbcsqgyfgyikvbca.supabase.co
+- **Table**: articles
+- **Data**: Ben's Bytes + AI Rundown articles
 
 ---
 
-Built with ❤️ using the B.L.A.S.T. Master System Protocol
+Built with vanilla HTML/CSS/JS
