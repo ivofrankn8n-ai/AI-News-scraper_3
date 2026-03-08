@@ -1034,19 +1034,16 @@
             if (updateTimestamp) {
                 const now = new Date();
                 lastArticleLoadTime = now;
-                const timeStr = now.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+                // Format as UTC time in 24-hour format without seconds
+                const hours = now.getUTCHours().toString().padStart(2, '0');
+                const minutes = now.getUTCMinutes().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes} UTC`;
                 document.getElementById('last-updated').textContent = timeStr;
             } else if (lastArticleLoadTime) {
                 // Keep showing the last load time
-                const timeStr = lastArticleLoadTime.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
+                const hours = lastArticleLoadTime.getUTCHours().toString().padStart(2, '0');
+                const minutes = lastArticleLoadTime.getUTCMinutes().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes} UTC`;
                 document.getElementById('last-updated').textContent = timeStr;
             }
         }
@@ -1066,11 +1063,11 @@
             });
         }
 
-        // Refresh data by running the pipeline
+        // Refresh data by reloading articles from Supabase
         async function refreshData() {
             const btn = document.querySelector('.refresh-btn');
             btn.disabled = true;
-            btn.textContent = 'Running Pipeline...';
+            btn.textContent = 'Refreshing...';
             
             try {
                 // Show loading state
@@ -1097,24 +1094,16 @@
                     </div>
                 `;
                 
-                // Try to call the pipeline API (may not work on Vercel)
-                try {
-                    const response = await fetch('/api/refresh');
-                    if (!response.ok) {
-                        throw new Error('API refresh failed');
-                    }
-                    
-                    // Wait a bit for pipeline to complete
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                } catch {
-                    // Fallback: just reload articles from Supabase
-                    console.log('API refresh not available, reloading articles directly');
-                }
+                console.log('🔃 Refresh initiated: Reloading articles from Supabase...');
                 
-                // Reload articles
+                // Note: Automated scraping via Modal.com coming soon
+                // For now, we refresh articles from Supabase which may have new content
+                // from scheduled scrapers running on Modal.com
+                
+                // Reload articles from Supabase
                 await loadArticles();
                 
-                btn.textContent = '✅ Refreshed!';
+                btn.textContent = '✅ Updated!';
                 setTimeout(() => {
                     btn.textContent = '🔄 Refresh Articles';
                     btn.disabled = false;
