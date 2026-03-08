@@ -908,11 +908,18 @@
                 
                 debugLog(`Connecting to Supabase: ${supabaseUrl}`);
                 
-                // Check if Supabase client is available
+                // Check if Supabase client is available - wait a bit if not
                 if (!window.supabase || !window.supabase.createClient) {
-                    debugLog('❌ Supabase client not loaded');
-                    showError('Supabase client failed to load. Please refresh the page.');
-                    return null;
+                    debugLog('Supabase client not loaded yet, waiting...');
+                    // Wait for Supabase library to load
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Check again
+                    if (!window.supabase || !window.supabase.createClient) {
+                        debugLog('❌ Supabase client still not loaded after waiting');
+                        showError('Supabase client failed to load. Please refresh the page.');
+                        return null;
+                    }
                 }
                 
                 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -1182,10 +1189,13 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('Dashboard initialized - loading articles...');
             loadSavedArticles();
             
-            // Load articles immediately on page load
-            loadArticles();
+            // Load articles immediately on page load with a small delay to ensure Supabase client is ready
+            setTimeout(() => {
+                loadArticles();
+            }, 100);
             
             // Search input
             document.getElementById('search-input').addEventListener('input', (e) => {
