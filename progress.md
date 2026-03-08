@@ -65,6 +65,10 @@
 - ✅ Removed duplicate refresh buttons
 - ✅ Centered empty state messages
 - ✅ Enhanced overall visual stability
+- ✅ Fixed time display format (24-hour UTC without seconds)
+- ✅ Improved refresh button feedback and functionality
+- ✅ Error messages now properly centered
+- ✅ Refresh button attempts to run scrapers in local development
 
 ## Key Decisions
 - Starting with newsletter scraping only
