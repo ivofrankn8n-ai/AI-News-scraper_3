@@ -709,7 +709,7 @@
         let savedArticles = new Set();
         let currentFilter = 'all';
         let searchQuery = '';
-        let debugEnabled = false;
+        let debugEnabled = true;
         let lastArticleLoadTime = null;
         let isInitialLoad = true;
 
@@ -1068,6 +1068,7 @@
                 }
             });
 
+            debugLog(`Updating stats: total=${articles.length}, today=${todayArticles.length}, saved=${savedArticles.size}`);
             document.getElementById('total-articles').textContent = articles.length;
             document.getElementById('new-today').textContent = todayArticles.length;
             document.getElementById('saved-count').textContent = savedArticles.size;
