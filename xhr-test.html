@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XHR Supabase Test</title>
+</head>
+<body>
+    <h1>XHR Supabase Test</h1>
+    <div id="status">Testing connection...</div>
+    
+    <script>
+        console.log('XHR test started');
+        
+        function testConnection() {
+            const status = document.getElementById('status');
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://keajnbcsqgyfgyikvbca.supabase.co/rest/v1/articles?select=*&limit=3');
+            xhr.setRequestHeader('apikey', 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay');
+            xhr.setRequestHeader('Authorization', 'Bearer sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            xhr.onload = function() {
+                console.log('XHR response status:', xhr.status);
+                if (xhr.status === 200) {
+                    const data = JSON.parse(xhr.responseText);
+                    console.log('Success! Data:', data);
+                    status.innerHTML = `✅ Success! Found ${data.length} articles`;
+                } else {
+                    console.error('Failed:', xhr.status, xhr.statusText);
+                    status.innerHTML = `❌ Failed: ${xhr.status} ${xhr.statusText}`;
+                }
+            };
+            
+            xhr.onerror = function() {
+                console.error('XHR error');
+                status.innerHTML = '❌ XHR Error';
+            };
+            
+            xhr.send();
+        }
+        
+        // Start test immediately
+        testConnection();
+    </script>
+</body>
+</html>
