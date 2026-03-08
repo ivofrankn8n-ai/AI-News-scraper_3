@@ -708,6 +708,7 @@
         let searchQuery = '';
         let debugEnabled = false;
         let lastArticleLoadTime = null;
+        let isInitialLoad = true;
 
         // Debug functions
         function debugLog(message) {
@@ -859,7 +860,8 @@
                     });
                     
                     renderArticles();
-                    updateStats(true); // Update timestamp when articles are loaded
+                    // Only update timestamp on initial load, not browser refresh
+                    updateStats(isInitialLoad);
                 } else {
                     throw new Error('No articles available from any source');
                 }
@@ -1119,7 +1121,9 @@
                 
                 // Reload articles from Supabase
                 btn.textContent = 'Loading articles...';
+                // Force update timestamp for manual refresh
                 await loadArticles();
+                updateStats(true);
                 
                 // Check if we got any new articles
                 const articleCount = articles.length;
@@ -1163,18 +1167,9 @@
             // Auto-refresh if needed
             autoRefreshOnLoad();
             
-            // Load articles (will be called by autoRefreshOnLoad if needed)
-            loadArticles();
-            
-            // Filter buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    currentFilter = btn.dataset.filter;
-                    
-                    renderArticles();
-                });
+            // Mark initial load complete
+            isInitialLoad = false;
+        });
             });
 
             // Search input

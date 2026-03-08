@@ -54,8 +54,8 @@ class NewsletterScraperSupabase:
             root = ET.fromstring(response.content)
             articles = []
             
-            # Parse RSS items
-            for item in root.findall('.//item')[:25]:  # Increased limit to 25 articles
+            # Parse RSS items - unlimited
+            for item in root.findall('.//item'):
                 article = self._parse_rss_item(item, 'bens_bites')
                 if article:
                     articles.append(article)
@@ -86,8 +86,8 @@ class NewsletterScraperSupabase:
                 if loc is not None and '/p/' in loc.text:
                     article_urls.append(loc.text)
             
-            # Get latest articles
-            for url in article_urls[:15]:  # Increased limit to 15 articles
+            # Get all articles
+            for url in article_urls:
                 article = self._scrape_ai_rundown_article(url)
                 if article:
                     articles.append(article)
@@ -253,22 +253,23 @@ class NewsletterScraperSupabase:
         """Generate unique ID from URL"""
         return hashlib.md5(url.encode()).hexdigest()
     
-    def filter_recent_articles(self, articles, hours=24):
-        """Filter articles from last N hours"""
-        cutoff_time = datetime.now() - timedelta(hours=hours)
-        recent_articles = []
+    def filter_recent_articles(self, articles):
+        """Filter articles published today only"""
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        today_articles = []
         
         for article in articles:
             try:
-                # Parse publication date
+                # Parse publication date and check if it's today
                 pub_date = datetime.fromisoformat(article['published_at'].replace('Z', '+00:00'))
-                if pub_date >= cutoff_time:
-                    recent_articles.append(article)
+                pub_date_str = pub_date.strftime('%Y-%m-%d')
+                if pub_date_str == today_str:
+                    today_articles.append(article)
             except:
-                # If date parsing fails, include article
-                recent_articles.append(article)
+                # If date parsing fails, skip article (be conservative)
+                continue
         
-        return recent_articles
+        return today_articles
     
     def save_articles(self, articles, filepath=None):
         """Save articles to Supabase or local file"""
@@ -309,8 +310,8 @@ class NewsletterScraperSupabase:
         # Combine articles
         all_articles = bens_articles + ai_rundown_articles
         
-        # Filter recent articles (last 2 hours to avoid duplicates)
-        recent_articles = self.filter_recent_articles(all_articles, hours=2)
+        # Filter articles published today only
+        recent_articles = self.filter_recent_articles(all_articles)
         
         print(f"Total recent articles: {len(recent_articles)}")
         
