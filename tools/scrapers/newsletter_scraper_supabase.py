@@ -13,6 +13,7 @@ import os
 from urllib.parse import urlparse
 import time
 import sys
+from dotenv import load_dotenv
 
 # Add parent directory to path for absolute imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -265,8 +266,8 @@ class NewsletterScraperSupabase:
         # Combine articles
         all_articles = bens_articles + ai_rundown_articles
         
-        # Filter recent articles
-        recent_articles = self.filter_recent_articles(all_articles)
+        # Filter recent articles (last 6 hours to avoid duplicates)
+        recent_articles = self.filter_recent_articles(all_articles, hours=6)
         
         print(f"Total recent articles: {len(recent_articles)}")
         
@@ -278,8 +279,22 @@ class NewsletterScraperSupabase:
 
 def main():
     """Main function"""
+    # Load environment variables from .env file
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    env_path = os.path.join(project_root, '.env')
+    load_dotenv(env_path)
+    
     # Check if Supabase is available
-    use_supabase = os.getenv('SUPABASE_ANON_KEY') is not None
+    supabase_key = os.getenv('SUPABASE_ANON_KEY')
+    supabase_url = os.getenv('SUPABASE_URL')
+    use_supabase = supabase_key is not None
+    
+    print(f"Supabase URL: {supabase_url}")
+    print(f"Supabase Key available: {supabase_key is not None}")
+    print(f"Using Supabase: {use_supabase}")
+    
+    if use_supabase:
+        print("Attempting to initialize Supabase client...")
     
     scraper = NewsletterScraperSupabase(use_supabase=use_supabase)
     articles = scraper.scrape_all()

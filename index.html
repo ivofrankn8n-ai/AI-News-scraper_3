@@ -707,6 +707,7 @@
         let currentFilter = 'all';
         let searchQuery = '';
         let debugEnabled = false;
+        let lastArticleLoadTime = null;
 
         // Debug functions
         function debugLog(message) {
@@ -825,7 +826,7 @@
             }
             
             renderArticles();
-            updateStats();
+            updateStats(false); // Don't update timestamp when saving articles
         }
 
         // Load articles - Supabase as primary source, local files as fallback
@@ -858,7 +859,7 @@
                     });
                     
                     renderArticles();
-                    updateStats();
+                    updateStats(true); // Update timestamp when articles are loaded
                 } else {
                     throw new Error('No articles available from any source');
                 }
@@ -1006,7 +1007,7 @@
         }
 
         // Update statistics
-        function updateStats() {
+        function updateStats(updateTimestamp = false) {
             // Simple date string comparison (YYYY-MM-DD)
             const todayStr = new Date().toISOString().split('T')[0];
             debugLog(`Today date string: ${todayStr}`);
@@ -1029,14 +1030,25 @@
             document.getElementById('new-today').textContent = todayArticles.length;
             document.getElementById('saved-count').textContent = savedArticles.size;
             
-            // Show actual timestamp for last updated
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('last-updated').textContent = timeStr;
+            // Update timestamp only when articles are loaded/refreshed
+            if (updateTimestamp) {
+                const now = new Date();
+                lastArticleLoadTime = now;
+                const timeStr = now.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('last-updated').textContent = timeStr;
+            } else if (lastArticleLoadTime) {
+                // Keep showing the last load time
+                const timeStr = lastArticleLoadTime.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('last-updated').textContent = timeStr;
+            }
         }
 
         // Format source name
