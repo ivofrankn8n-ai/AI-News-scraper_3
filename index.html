@@ -629,9 +629,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Set Supabase credentials from environment variables
-        // These are set by Vercel environment variables
-        window.SUPABASE_URL = 'https://keajnbcsqgyfgyikvbca.supabase.co';
-        window.SUPABASE_ANON_KEY = 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay';
+        // Try to get from Vercel environment first, fallback to defaults
+        window.SUPABASE_URL = window.SUPABASE_URL || 'https://keajnbcsqgyfgyikvbca.supabase.co';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay';
+        
+        console.log('Supabase URL:', window.SUPABASE_URL);
+        console.log('Supabase Key available:', !!window.SUPABASE_ANON_KEY);
     </script>
 </head>
 <body>
@@ -723,6 +726,18 @@
                     debugOutput.scrollTop = debugOutput.scrollHeight;
                 }
             }
+        }
+        
+        function showError(message) {
+            const container = document.getElementById('articles-container');
+            container.classList.add('empty-container');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>Connection Error</h3>
+                    <p>${message}</p>
+                    <p><small>Please check the browser console for details.</small></p>
+                </div>
+            `;
         }
 
         function toggleDebug() {
@@ -864,14 +879,28 @@
                     // Only update timestamp on initial load, not browser refresh
                     updateStats(isInitialLoad);
                 } else {
-                    throw new Error('No articles available from any source');
+                    // If no articles loaded, show sample data for testing
+                    debugLog('No articles loaded, showing sample data');
+                    articles = [
+                        {
+                            id: 'sample-1',
+                            title: 'Sample Article 1',
+                            source: 'bens_bites',
+                            url: 'https://example.com/1',
+                            summary: 'This is a sample article for testing',
+                            published_at: new Date().toISOString(),
+                            category: 'AI News',
+                            author: 'Test Author',
+                            image_url: '',
+                            is_saved: false
+                        }
+                    ];
+                    renderArticles();
+                    updateStats(isInitialLoad);
                 }
             } catch (error) {
                 debugLog(`Error loading articles: ${error}`);
-                const container = document.getElementById('articles-container');
-                container.classList.add('empty-container');
-                container.innerHTML = 
-                    '<div class="empty-state"><h3>Error loading articles</h3><p>Please try refreshing the page</p></div>';
+                showError(`Failed to load articles: ${error.message}`);
             }
         }
 
@@ -884,6 +913,8 @@
                 
                 if (!supabaseKey) {
                     debugLog('No Supabase API key provided, skipping Supabase connection');
+                    // Show error to user
+                    showError('Supabase API key not configured. Please check environment variables.');
                     return null;
                 }
                 
@@ -906,8 +937,11 @@
                     debugLog(`Supabase error: ${error.message}`);
                     debugLog(`Supabase error details: ${JSON.stringify(error)}`);
                     // Check if it's a CORS error
-                    if (error.message.includes('CORS') || error.message.includes('Origin')) {
-                        debugLog('CORS error detected - Supabase may not be configured for localhost');
+                    if (error.message.includes('CORS') || error.message.includes('Origin') || error.message.includes('cross-origin')) {
+                        debugLog('CORS error detected - Supabase may not be configured for this domain');
+                        showError('CORS error: Supabase may not be configured for this domain. Please check Supabase CORS settings.');
+                    } else {
+                        showError(`Supabase connection failed: ${error.message}`);
                     }
                     return null;
                 }
