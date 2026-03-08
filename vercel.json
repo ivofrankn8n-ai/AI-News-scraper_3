@@ -2,17 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
+      "src": "*.html",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
+      "src": "/(.*\.html)",
+      "dest": "/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html",
-      "headers": {
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://keajnbcsqgyfgyikvbca.supabase.co; style-src 'self' 'unsafe-inline';"
-      }
+      "dest": "/index.html"
     }
   ]
 }
