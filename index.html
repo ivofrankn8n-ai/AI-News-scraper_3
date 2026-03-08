@@ -1134,6 +1134,19 @@
                 renderArticles();
             });
             
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Update active state
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Apply filter
+                    currentFilter = btn.dataset.filter;
+                    renderArticles();
+                });
+            });
+            
             // Mark initial load complete
             isInitialLoad = false;
         });
