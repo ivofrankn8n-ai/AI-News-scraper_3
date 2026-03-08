@@ -1173,14 +1173,19 @@
                 refreshData();
                 localStorage.setItem('last_refresh', now.toString());
             }
+            // Always ensure articles are loaded, even if not refreshing
+            else {
+                // Articles are already being loaded by the main loadArticles() call
+                console.log('Articles loading from cache (less than 24 hours old)');
+            }
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedArticles();
             
-            // Auto-refresh if needed
-            autoRefreshOnLoad();
+            // Load articles immediately on page load
+            loadArticles();
             
             // Search input
             document.getElementById('search-input').addEventListener('input', (e) => {
