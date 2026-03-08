@@ -151,6 +151,16 @@ python tools/migrate_to_supabase.py
 
 ### Common Issues
 
+**Time Display Shows Wrong Format**
+- Dashboard now displays UTC time in 24-hour format (e.g., "14:30 UTC")
+- "New Today" count uses UTC date comparison
+- This ensures consistent behavior across timezones
+
+**Refresh Button Doesn't Run Scrapers**
+- Refresh button reloads articles from Supabase but doesn't run scrapers
+- Automated scraping via Modal.com will be implemented separately
+- Button provides feedback about upcoming Modal integration
+
 **Supabase Connection Fails**
 - Verify API key has correct permissions
 - Check RLS policies allow public read access
@@ -185,7 +195,10 @@ python tools/migrate_to_supabase.py
 
 - ✅ Articles load from Supabase instead of local files
 - ✅ Dashboard accessible via public URL
-- ✅ Scrapers run automatically every 6 hours
+- ✅ UTC time display in 24-hour format
+- ✅ Refresh functionality with clear feedback
+- ✅ "New Today" count uses UTC date comparison
+- ⏳ Scrapers run automatically every 6 hours (Modal.com upcoming)
 - ✅ Performance comparable to local version
 - ✅ Graceful error handling for all scenarios
 
