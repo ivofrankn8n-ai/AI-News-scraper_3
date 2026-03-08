@@ -57,19 +57,29 @@ class SimpleSupabaseClient:
         supabase_article = {k: v for k, v in supabase_article.items() if v is not None}
         
         try:
-            # Upsert using Supabase REST API
-            response = requests.post(
-                f"{self.url}/rest/v1/articles",
+            # Try to update existing article first using PATCH
+            patch_response = requests.patch(
+                f"{self.url}/rest/v1/articles?id=eq.{article_id}",
                 headers=self.headers,
-                json=supabase_article,
-                params={"on_conflict": "id"}
+                json=supabase_article
             )
             
-            if response.status_code in [200, 201]:
-                print(f"SUCCESS: Upserted article: {article_data['title'][:50].encode('utf-8', 'ignore').decode('utf-8')}...")
-                return response.json()[0] if response.json() else supabase_article
+            if patch_response.status_code == 200:
+                print(f"SUCCESS: Updated article: {article_data['title'][:50].encode('utf-8', 'ignore').decode('utf-8')}...")
+                return patch_response.json()[0] if patch_response.json() else supabase_article
+            
+            # If PATCH fails (article doesn't exist), try INSERT
+            post_response = requests.post(
+                f"{self.url}/rest/v1/articles",
+                headers=self.headers,
+                json=supabase_article
+            )
+            
+            if post_response.status_code in [200, 201]:
+                print(f"SUCCESS: Inserted article: {article_data['title'][:50].encode('utf-8', 'ignore').decode('utf-8')}...")
+                return post_response.json()[0] if post_response.json() else supabase_article
             else:
-                print(f"FAILED: Failed to upsert article: {response.status_code} - {response.text}")
+                print(f"FAILED: Failed to upsert article: {post_response.status_code} - {post_response.text}")
                 return None
                 
         except Exception as e:

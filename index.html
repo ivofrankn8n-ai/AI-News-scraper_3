@@ -838,6 +838,7 @@
                 // Primary source: Supabase
                 debugLog('Loading from Supabase (primary source)...');
                 let loadedArticles = await loadFromSupabase();
+                debugLog(`Supabase returned: ${loadedArticles ? loadedArticles.length : 'null'} articles`);
                 
                 // Only fallback if Supabase fails or returns no articles
                 if (!loadedArticles) {
@@ -902,13 +903,16 @@
                 const { data, error } = await Promise.race([supabasePromise, timeoutPromise]);
                 
                 if (error) {
-                    debugLog(`Supabase error: ${error}`);
+                    debugLog(`Supabase error: ${error.message}`);
+                    debugLog(`Supabase error details: ${JSON.stringify(error)}`);
                     // Check if it's a CORS error
                     if (error.message.includes('CORS') || error.message.includes('Origin')) {
                         debugLog('CORS error detected - Supabase may not be configured for localhost');
                     }
                     return null;
                 }
+                
+                debugLog(`Supabase response: data=${data ? data.length : 'null'}, error=${error ? 'yes' : 'no'}`);
                 
                 if (data && data.length > 0) {
                     debugLog(`✓ Loaded ${data.length} articles from Supabase`);
