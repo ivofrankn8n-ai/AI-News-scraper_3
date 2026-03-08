@@ -29,7 +29,7 @@ git push -u origin main
 ### 2.2 Repository Structure
 ```
 AI_NEWS-3/
-├── dashboard.html          # Main dashboard
+├── index.html              # Main dashboard
 ├── serve.py               # Local development server
 ├── requirements.txt       # Python dependencies
 ├── .env.template          # Environment variables template

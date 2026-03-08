@@ -132,7 +132,7 @@ class DashboardAPIHandler(BaseHTTPRequestHandler):
     def handle_static_file(self, path):
         """Serve static files"""
         if path == '/':
-            path = '/dashboard.html'
+            path = '/index.html'
         
         file_path = os.path.join(os.path.dirname(__file__), path.lstrip('/'))
         
@@ -171,7 +171,7 @@ def main():
     server = HTTPServer(('localhost', port), DashboardAPIHandler)
     
     print(f"API server running on http://localhost:{port}")
-    print("Dashboard available at: http://localhost:8001/dashboard.html")
+    print("Dashboard available at: http://localhost:8001/")
     print("Press Ctrl+C to stop")
     
     try:

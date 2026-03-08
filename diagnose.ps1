@@ -31,8 +31,8 @@ foreach ($port in $ports) {
 # Test server connectivity
 Write-Host "`n[3/4] Testing server connectivity..." -ForegroundColor Yellow
 $testUrls = @(
-    "http://localhost:8001/dashboard.html",
-    "http://127.0.0.1:8001/dashboard.html"
+    "http://localhost:8001/",
+    "http://127.0.0.1:8001/"
 )
 
 foreach ($url in $testUrls) {
@@ -58,7 +58,7 @@ if ($firewall) {
 
 Write-Host "`n" + "=" * 50
 Write-Host "🎯 Recommended Actions:" -ForegroundColor Cyan
-Write-Host "1. Open launch_dashboard.html in your browser" -ForegroundColor White
+Write-Host "1. Open index.html in your browser" -ForegroundColor White
 Write-Host "2. Try the manual URLs listed above" -ForegroundColor White
 Write-Host "3. Use incognito/private browsing mode" -ForegroundColor White
 Write-Host "4. Try a different browser" -ForegroundColor White

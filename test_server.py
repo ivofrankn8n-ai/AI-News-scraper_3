@@ -19,8 +19,7 @@ def start_server():
     try:
         with socketserver.TCPServer(("localhost", 8001), DashboardHandler) as httpd:
             print("AI News Dashboard server started!")
-            print("Dashboard available at: http://localhost:8001/dashboard.html")
-            print("Launcher page: http://localhost:8001/launch_dashboard.html")
+            print("Dashboard available at: http://localhost:8001/")
             print("Press Ctrl+C to stop the server")
             httpd.serve_forever()
     except Exception as e:

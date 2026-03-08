@@ -25,12 +25,11 @@ def main():
     # Create server
     with socketserver.TCPServer(("localhost", PORT), DashboardHandler) as httpd:
         print(f"Server running at: http://localhost:{PORT}")
-        print(f"Dashboard: http://localhost:{PORT}/dashboard.html")
-        print("Press Ctrl+C to stop the server")
+        print(f"Dashboard: http://localhost:{PORT}/")
         
         # Open browser
         try:
-            webbrowser.open(f'http://localhost:{PORT}/dashboard.html')
+            webbrowser.open(f'http://localhost:{PORT}/')
         except:
             print("Could not open browser automatically")
         

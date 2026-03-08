@@ -58,7 +58,7 @@
 - ✅ Enhanced professional appearance with glassmorphism
 - ✅ Added manual refresh button with proper states
 - ✅ Fixed layout shift when clicking "Saved Only" filter
-- ✅ Consolidated multiple dashboard files into single dashboard.html
+- ✅ Consolidated multiple dashboard files into single index.html
 - ✅ Added scrollbar-gutter: stable to prevent viewport width changes
 - ✅ Fixed search box background brightening issue
 - ✅ Implemented consistent scrollbar styling with theme colors

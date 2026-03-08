@@ -15,10 +15,10 @@ Start-Sleep -Seconds 3
 
 # Open dashboard
 Write-Host "Opening dashboard..." -ForegroundColor Green
-Start-Process "http://localhost:8000/launch_dashboard.html"
+Start-Process "http://localhost:8000/"
 
 Write-Host "`n🎉 Dashboard should open automatically!" -ForegroundColor Green
-Write-Host "If it doesn't open, manually go to: http://localhost:8000/dashboard.html" -ForegroundColor Yellow
+Write-Host "If it doesn't open, manually go to: http://localhost:8000/" -ForegroundColor Yellow
 Write-Host "`nPress Enter to stop the server..." -ForegroundColor White
 $null = Read-Host
 

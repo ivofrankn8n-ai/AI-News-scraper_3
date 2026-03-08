@@ -14,9 +14,9 @@ REM Wait for server to start
 echo Waiting for server to start...
 ping -n 3 127.0.0.1 >nul
 
-REM Open the launcher page
-echo Opening dashboard launcher...
-start "" "http://localhost:8000/launch_dashboard.html"
+REM Open the dashboard page
+echo Opening dashboard...
+start "" "http://localhost:8000/"
 
 echo.
 echo ========================================
@@ -25,8 +25,8 @@ echo ========================================
 echo.
 echo If it doesn't open automatically:
 echo 1. Open your web browser
-echo 2. Go to: http://localhost:8000/dashboard.html
-echo 3. Or try: http://127.0.0.1:8000/dashboard.html
+echo 2. Go to: http://localhost:8000/
+echo 3. Or try: http://127.0.0.1:8000/
 echo.
 echo Press any key to stop the server...
 pause >nul

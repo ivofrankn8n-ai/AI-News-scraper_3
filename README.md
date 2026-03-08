@@ -24,7 +24,7 @@ A beautiful, interactive dashboard that aggregates and displays the latest AI ar
    python serve.py
    ```
 
-3. **Open your browser** to `http://localhost:8000/dashboard.html`
+3. **Open your browser** to `http://localhost:8000/`
 
 Or use the batch file:
 ```bash
@@ -35,7 +35,7 @@ run.bat
 
 ```
 AI_NEWS-3/
-├── dashboard.html          # Main dashboard interface
+├── index.html              # Main dashboard interface
 ├── serve.py               # Local development server
 ├── run.bat                # Windows batch runner
 ├── model.md               # Project constitution & data schema
@@ -95,10 +95,9 @@ This project follows the B.L.A.S.T. Master System Protocol:
 ### Adding New Sources
 1. Add scraper in `tools/scrapers/`
 2. Update data schema in `model.md`
-3. Add source filter in `dashboard.html`
+3. Add source filter in `index.html`
 
-### Styling Changes
-- Modify CSS variables in `dashboard.html`
+- Modify CSS variables in `index.html`
 - Update card layouts and animations
 
 ## Development

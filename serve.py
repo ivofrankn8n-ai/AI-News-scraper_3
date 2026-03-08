@@ -36,7 +36,7 @@ def main():
             
             # Open browser automatically
             try:
-                webbrowser.open(f'http://localhost:{PORT}/dashboard.html')
+                webbrowser.open(f'http://localhost:{PORT}/')
             except Exception as e:
                 print(f"Browser opening failed: {e}")
             
