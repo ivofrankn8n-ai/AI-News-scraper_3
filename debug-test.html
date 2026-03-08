@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="status">Testing...</div>
+    
+    <script>
+        console.log('Debug test started');
+        
+        // Simple test to see if JavaScript is executing
+        document.getElementById('status').innerHTML = 'JavaScript is running...';
+        
+        setTimeout(async () => {
+            try {
+                console.log('Making fetch request...');
+                document.getElementById('status').innerHTML = 'Making request...';
+                
+                const response = await fetch('https://keajnbcsqgyfgyikvbca.supabase.co/rest/v1/articles?select=*&limit=3', {
+                    headers: {
+                        'apikey': 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay',
+                        'Authorization': 'Bearer sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                document.getElementById('status').innerHTML = `Response status: ${response.status}`;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Success! Data:', data);
+                    document.getElementById('status').innerHTML = `✅ Success! Found ${data.length} articles`;
+                } else {
+                    console.error('Failed:', response.status, response.statusText);
+                    document.getElementById('status').innerHTML = `❌ Failed: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('status').innerHTML = `❌ Error: ${error.message}`;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
