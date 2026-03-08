@@ -892,7 +892,7 @@
             }
         }
 
-        // Load articles from Supabase
+        // Load articles from Supabase using direct REST API (fallback if Supabase client fails)
         async function loadFromSupabase() {
             try {
                 // Get Supabase credentials from environment or use defaults
@@ -907,6 +907,47 @@
                 }
                 
                 debugLog(`Connecting to Supabase: ${supabaseUrl}`);
+                
+                // Try using direct REST API first (more reliable)
+                try {
+                    debugLog('Attempting direct REST API call...');
+                    const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*&order=published_at.desc`, {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        debugLog(`✓ Loaded ${data.length} articles via REST API`);
+                        debugLog(`First article date: ${data[0]?.published_at}`);
+                        
+                        // Transform Supabase data to match our expected format
+                        return data.map(article => ({
+                            id: article.id,
+                            title: article.title,
+                            source: article.source,
+                            url: article.url,
+                            summary: article.subtitle || article.summary || '',
+                            published_at: article.published_at,
+                            category: article.category || 'AI News',
+                            author: article.author || 'Unknown',
+                            image_url: article.image_url || '',
+                            is_saved: false // Will be updated from localStorage
+                        }));
+                    } else {
+                        debugLog(`REST API failed: ${response.status} ${response.statusText}`);
+                        // Fall back to Supabase client
+                    }
+                } catch (restError) {
+                    debugLog(`REST API error: ${restError}`);
+                    // Fall back to Supabase client
+                }
+                
+                // Fallback: Use Supabase client if REST API fails
+                debugLog('Falling back to Supabase client...');
                 
                 // Check if Supabase client is available - wait a bit if not
                 if (!window.supabase || !window.supabase.createClient) {
