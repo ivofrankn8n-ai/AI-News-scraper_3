@@ -627,6 +627,12 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Set Supabase credentials from environment variables
+        // These are set by Vercel environment variables
+        window.SUPABASE_URL = 'https://keajnbcsqgyfgyikvbca.supabase.co';
+        window.SUPABASE_ANON_KEY = 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay';
+    </script>
 </head>
 <body>
     <div class="container">
@@ -704,14 +710,17 @@
 
         // Debug functions
         function debugLog(message) {
+            // Always log to console for debugging
+            console.log(message);
+            
+            // Only show in UI if debug is enabled and output element exists
             if (debugEnabled) {
                 const debugOutput = document.getElementById('debug-output');
-                if (debugOutput) {
+                if (debugOutput && debugOutput.style.display !== 'none') {
                     debugOutput.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
                     debugOutput.scrollTop = debugOutput.scrollHeight;
                 }
             }
-            console.log(message);
         }
 
         function toggleDebug() {
@@ -719,17 +728,24 @@
             const debugOutput = document.getElementById('debug-output');
             const debugBtn = document.querySelector('.debug-btn');
             
-            if (debugEnabled) {
-                debugOutput.style.display = 'block';
-                debugBtn.textContent = '🔧 Debug (ON)';
-                debugBtn.style.background = 'rgba(59, 130, 246, 0.3)';
-                debugBtn.style.borderColor = 'var(--primary)';
-                debugLog('Debug mode enabled');
+            // Check if debug elements exist (they might be commented out in production)
+            if (debugOutput && debugBtn) {
+                if (debugEnabled) {
+                    debugOutput.style.display = 'block';
+                    debugBtn.textContent = '🔧 Debug (ON)';
+                    debugBtn.style.background = 'rgba(59, 130, 246, 0.3)';
+                    debugBtn.style.borderColor = 'var(--primary)';
+                    debugLog('Debug mode enabled');
+                } else {
+                    debugOutput.style.display = 'none';
+                    debugBtn.textContent = '🔧 Debug';
+                    debugBtn.style.background = 'rgba(59, 130, 246, 0.1)';
+                    debugBtn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                }
             } else {
-                debugOutput.style.display = 'none';
-                debugBtn.textContent = '🔧 Debug';
-                debugBtn.style.background = 'rgba(59, 130, 246, 0.1)';
-                debugBtn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                // Debug elements don't exist (commented out in production)
+                debugLog('Debug elements not found - running in production mode');
+                debugEnabled = false;
             }
         }
 
@@ -826,15 +842,15 @@
                     debugLog('Supabase connection failed, falling back to local files...');
                     loadedArticles = await loadFromApiOrFile();
                 } else if (loadedArticles.length === 0) {
-                    console.log('Supabase is empty, falling back to local files...');
+                    debugLog('Supabase is empty, falling back to local files...');
                     loadedArticles = await loadFromApiOrFile();
                 } else {
-                    console.log(`✓ Successfully loaded ${loadedArticles.length} articles from Supabase`);
+                    debugLog(`✓ Successfully loaded ${loadedArticles.length} articles from Supabase`);
                 }
                 
                 if (loadedArticles && loadedArticles.length > 0) {
                     articles = loadedArticles;
-                    console.log(`Final article count: ${articles.length}`);
+                    debugLog(`Final article count: ${articles.length}`);
                     
                     // Update saved status based on localStorage
                     articles.forEach(article => {
@@ -847,7 +863,7 @@
                     throw new Error('No articles available from any source');
                 }
             } catch (error) {
-                console.error('Error loading articles:', error);
+                debugLog(`Error loading articles: ${error}`);
                 document.getElementById('articles-container').innerHTML = 
                     '<div class="empty-state"><h3>Error loading articles</h3><p>Please try refreshing the page</p></div>';
             }
@@ -881,10 +897,10 @@
                 const { data, error } = await Promise.race([supabasePromise, timeoutPromise]);
                 
                 if (error) {
-                    console.error('Supabase error:', error);
+                    debugLog(`Supabase error: ${error}`);
                     // Check if it's a CORS error
                     if (error.message.includes('CORS') || error.message.includes('Origin')) {
-                        console.log('CORS error detected - Supabase may not be configured for localhost');
+                        debugLog('CORS error detected - Supabase may not be configured for localhost');
                     }
                     return null;
                 }
