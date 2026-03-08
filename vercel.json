@@ -7,16 +7,25 @@
     },
     {
       "src": "*.html",
-      "use": "@vercel/static"
+      "use": "@vercel/static",
+      "config": {
+        "cache": false
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/articles",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      },
       "dest": "/api/articles.js"
     },
     {
       "src": "/(.*)",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      },
       "dest": "/index.html"
     }
   ]
