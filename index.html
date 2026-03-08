@@ -629,9 +629,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Set Supabase credentials from environment variables
-        // Try to get from Vercel environment first, fallback to defaults
-        window.SUPABASE_URL = window.SUPABASE_URL || 'https://keajnbcsqgyfgyikvbca.supabase.co';
-        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay';
+        // On Vercel, these should be set as environment variables
+        // Fallback to hardcoded values for testing
+        window.SUPABASE_URL = 'https://keajnbcsqgyfgyikvbca.supabase.co';
+        window.SUPABASE_ANON_KEY = 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay';
         
         console.log('Supabase URL:', window.SUPABASE_URL);
         console.log('Supabase Key available:', !!window.SUPABASE_ANON_KEY);
@@ -855,13 +856,13 @@
                 let loadedArticles = await loadFromSupabase();
                 debugLog(`Supabase returned: ${loadedArticles ? loadedArticles.length : 'null'} articles`);
                 
-                // Only fallback if Supabase fails or returns no articles
+                // Only fallback if Supabase fails (not if it's empty)
                 if (!loadedArticles) {
                     debugLog('Supabase connection failed, falling back to local files...');
                     loadedArticles = await loadFromApiOrFile();
                 } else if (loadedArticles.length === 0) {
-                    debugLog('Supabase is empty, falling back to local files...');
-                    loadedArticles = await loadFromApiOrFile();
+                    debugLog('Supabase returned empty dataset - this is normal if no articles today');
+                    // Don't fallback to local files - just show empty state
                 } else {
                     debugLog(`✓ Successfully loaded ${loadedArticles.length} articles from Supabase`);
                 }
@@ -878,26 +879,13 @@
                     renderArticles();
                     // Only update timestamp on initial load, not browser refresh
                     updateStats(isInitialLoad);
-                } else {
-                    // If no articles loaded, show sample data for testing
-                    debugLog('No articles loaded, showing sample data');
-                    articles = [
-                        {
-                            id: 'sample-1',
-                            title: 'Sample Article 1',
-                            source: 'bens_bites',
-                            url: 'https://example.com/1',
-                            summary: 'This is a sample article for testing',
-                            published_at: new Date().toISOString(),
-                            category: 'AI News',
-                            author: 'Test Author',
-                            image_url: '',
-                            is_saved: false
-                        }
-                    ];
-                    renderArticles();
-                    updateStats(isInitialLoad);
-                }
+            } else {
+                // If no articles loaded, show empty state
+                debugLog('No articles available');
+                articles = [];
+                renderArticles();
+                updateStats(isInitialLoad);
+            }
             } catch (error) {
                 debugLog(`Error loading articles: ${error}`);
                 showError(`Failed to load articles: ${error.message}`);
@@ -919,6 +907,14 @@
                 }
                 
                 debugLog(`Connecting to Supabase: ${supabaseUrl}`);
+                
+                // Check if Supabase client is available
+                if (!window.supabase || !window.supabase.createClient) {
+                    debugLog('❌ Supabase client not loaded');
+                    showError('Supabase client failed to load. Please refresh the page.');
+                    return null;
+                }
+                
                 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
                 
                 // Add timeout for Supabase request
@@ -967,24 +963,19 @@
                     }));
                 }
                 
-                return null;
+                debugLog('Supabase returned empty dataset');
+                return [];
             } catch (error) {
                 debugLog(`❌ Supabase connection failed: ${error}`);
                 return null;
             }
         }
 
-        // Fallback: Load articles from API or JSON file
+        // Fallback: Load articles from JSON file only (no API calls on Vercel)
         async function loadFromApiOrFile() {
             try {
-                let response;
-                try {
-                    response = await fetch('/api/articles');
-                    if (!response.ok) throw new Error('API failed');
-                } catch {
-                    // Fallback to direct file access
-                    response = await fetch('.tmp/processed_articles.json');
-                }
+                // Only try local file fallback - no API calls on Vercel
+                const response = await fetch('.tmp/processed_articles.json');
                 
                 if (!response.ok) {
                     throw new Error('Failed to load articles');
@@ -1139,24 +1130,9 @@
                 
                 console.log('🔃 Refresh initiated: Checking Supabase for new articles...');
                 
-                // Try to trigger scraping if possible (for local development)
-                try {
-                    // This will only work in local development environment
-                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        btn.textContent = 'Searching Articles...';
-                        const response = await fetch('/api/refresh', {
-                            method: 'POST'
-                        });
-                        
-                        if (response.ok) {
-                            console.log('✅ Scrapers triggered successfully');
-                            // Wait for scraping to complete
-                            await new Promise(resolve => setTimeout(resolve, 5000));
-                        }
-                    }
-                } catch (scraperError) {
-                    console.log('Scraper API not available (expected on Vercel)');
-                }
+                // On Vercel, we can't trigger scraping - just search Supabase
+                btn.textContent = 'Searching Articles...';
+                console.log('🔍 Searching Supabase for new articles...');
                 
                 // Reload articles from Supabase
                 btn.textContent = 'Loading articles...';
@@ -1169,7 +1145,7 @@
                 if (articleCount > 0) {
                     btn.textContent = `✅ ${articleCount} articles loaded`;
                 } else {
-                    btn.textContent = '⚠️ No articles found';
+                    btn.textContent = '✅ Search complete';
                 }
                 
                 setTimeout(() => {
@@ -1206,16 +1182,14 @@
             // Auto-refresh if needed
             autoRefreshOnLoad();
             
-            // Mark initial load complete
-            isInitialLoad = false;
-        });
-            });
-
             // Search input
             document.getElementById('search-input').addEventListener('input', (e) => {
                 searchQuery = e.target.value;
                 renderArticles();
             });
+            
+            // Mark initial load complete
+            isInitialLoad = false;
         });
     </script>
 </body>
