@@ -516,27 +516,6 @@
             transform: none;
         }
 
-        .debug-section {
-            margin: 1rem 0;
-            text-align: center;
-        }
-
-        .debug-btn {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            color: var(--text-light);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .debug-btn:hover {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.5);
-        }
-
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -667,12 +646,6 @@
             <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">🔄 Refresh Articles</button>
         </div>
 
-        <!-- Debug section removed for production -->
-        <!-- <div class="debug-section">
-            <button class="debug-btn" onclick="toggleDebug()">🔧 Debug</button>
-            <div id="debug-output" style="display: none; margin-top: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto;"></div>
-        </div> -->
-
         <div class="articles-grid" id="articles-container">
             <div class="skeleton-loader">
                 <div class="skeleton-card">
@@ -702,23 +675,11 @@
         let savedArticles = new Set();
         let currentFilter = 'all';
         let searchQuery = '';
-        let debugEnabled = true;
         let lastArticleLoadTime = null;
         let isInitialLoad = true;
 
-        // Debug functions
         function debugLog(message) {
-            // Always log to console for debugging
             console.log(message);
-            
-            // Only show in UI if debug is enabled and output element exists
-            if (debugEnabled) {
-                const debugOutput = document.getElementById('debug-output');
-                if (debugOutput && debugOutput.style.display !== 'none') {
-                    debugOutput.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
-                    debugOutput.scrollTop = debugOutput.scrollHeight;
-                }
-            }
         }
         
         function showError(message) {
@@ -731,76 +692,6 @@
                     <p><small>Please check the browser console for details.</small></p>
                 </div>
             `;
-        }
-
-        function toggleDebug() {
-            debugEnabled = !debugEnabled;
-            const debugOutput = document.getElementById('debug-output');
-            const debugBtn = document.querySelector('.debug-btn');
-            
-            // Check if debug elements exist (they might be commented out in production)
-            if (debugOutput && debugBtn) {
-                if (debugEnabled) {
-                    debugOutput.style.display = 'block';
-                    debugBtn.textContent = '🔧 Debug (ON)';
-                    debugBtn.style.background = 'rgba(59, 130, 246, 0.3)';
-                    debugBtn.style.borderColor = 'var(--primary)';
-                    debugLog('Debug mode enabled');
-                } else {
-                    debugOutput.style.display = 'none';
-                    debugBtn.textContent = '🔧 Debug';
-                    debugBtn.style.background = 'rgba(59, 130, 246, 0.1)';
-                    debugBtn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-                }
-            } else {
-                // Debug elements don't exist (commented out in production)
-                debugLog('Debug elements not found - running in production mode');
-                debugEnabled = false;
-            }
-        }
-
-        async function testSupabaseConnection() {
-            debugLog('Testing Supabase connection via REST API...');
-            const supabaseUrl = window.SUPABASE_URL;
-            const supabaseKey = window.SUPABASE_ANON_KEY;
-            
-            if (!supabaseUrl || !supabaseKey) {
-                debugLog('❌ Supabase credentials not found in environment');
-                return false;
-            }
-            
-            try {
-                const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*&limit=5&order=published_at.desc`, {
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    debugLog(`✓ Supabase REST API success: ${data.length} articles`);
-                    if (data.length > 0) {
-                        debugLog(`First article: ${data[0].title.substring(0, 50)}...`);
-                        debugLog(`First article date: ${data[0].published_at}`);
-                        
-                        // Test today count
-                        const todayStr = new Date().toISOString().split('T')[0];
-                        const todayCount = data.filter(article => 
-                            article.published_at.split('T')[0] === todayStr
-                        ).length;
-                        debugLog(`Articles from today: ${todayCount}`);
-                    }
-                    return true;
-                } else {
-                    debugLog(`❌ REST API failed: ${response.status} ${response.statusText}`);
-                    return false;
-                }
-            } catch (error) {
-                debugLog(`❌ Supabase connection failed: ${error}`);
-                return false;
-            }
         }
 
         // Load saved articles from localStorage
@@ -846,13 +737,12 @@
                 let loadedArticles = await loadFromSupabase();
                 debugLog(`Supabase returned: ${loadedArticles ? loadedArticles.length : 'null'} articles`);
                 
-                // Only fallback if Supabase fails (not if it's empty)
+                // Only show error if Supabase fails completely
                 if (!loadedArticles) {
-                    debugLog('Supabase connection failed, falling back to local files...');
-                    loadedArticles = await loadFromApiOrFile();
+                    debugLog('Supabase connection failed');
+                    showError('Failed to connect to article service');
                 } else if (loadedArticles.length === 0) {
-                    debugLog('Supabase returned empty dataset - this is normal if no articles today');
-                    // Don't fallback to local files - just show empty state
+                    debugLog('No articles available');
                 } else {
                     debugLog(`✓ Successfully loaded ${loadedArticles.length} articles from Supabase`);
                 }
@@ -905,28 +795,6 @@
             } catch (error) {
                 debugLog(`❌ API proxy failed: ${error}`);
                 showError(`Failed to connect to API: ${error.message}`);
-                return null;
-            }
-        }
-
-        // Fallback: Load articles from JSON file only (no API calls on Vercel)
-        async function loadFromApiOrFile() {
-            try {
-                // Only try local file fallback - no API calls on Vercel
-                const response = await fetch('.tmp/processed_articles.json');
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load articles');
-                }
-                
-                const data = await response.json();
-                debugLog(`✓ Loaded ${data.length} articles from fallback source`);
-                if (data.length > 0) {
-                    debugLog(`First fallback article date: ${data[0]?.published_at}`);
-                }
-                return data;
-            } catch (error) {
-                debugLog(`Fallback loading failed: ${error}`);
                 return null;
             }
         }
@@ -1100,24 +968,6 @@
             }
         }
         
-        // Auto-refresh on page load
-        function autoRefreshOnLoad() {
-            const lastRefresh = localStorage.getItem('last_refresh');
-            const now = Date.now();
-            const refreshInterval = 24 * 60 * 60 * 1000; // 24 hours
-            
-            if (!lastRefresh || (now - parseInt(lastRefresh)) > refreshInterval) {
-                // It's been more than 24 hours, run refresh
-                refreshData();
-                localStorage.setItem('last_refresh', now.toString());
-            }
-            // Always ensure articles are loaded, even if not refreshing
-            else {
-                // Articles are already being loaded by the main loadArticles() call
-                console.log('Articles loading from cache (less than 24 hours old)');
-            }
-        }
-
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             console.log('Dashboard initialized - loading articles...');
