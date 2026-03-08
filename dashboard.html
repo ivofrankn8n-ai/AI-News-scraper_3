@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Dashboard</title>
+    <style>
+        html {
+            scrollbar-gutter: stable;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+        }
+
+        /* Consistent scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.3);
+            border-radius: 5px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.5);
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #94a3b8;
+            --background: #0f172a;
+            --card-bg: rgba(255, 255, 255, 0.08);
+            --card-bg-solid: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #cbd5e1;
+            --text-lighter: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: 
+                linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%),
+                radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
+            color: var(--text);
+            backdrop-filter: blur(20px);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.01) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(40px);
+            z-index: -1;
+            border-radius: 2rem;
+            margin: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, var(--text) 0%, var(--text-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            font-weight: 300;
+        }
+
+        .stats-bar {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-item {
+            text-align: center;
+            color: var(--text);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--text-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            grid-template-areas: "filters search refresh";
+            align-items: center;
+            margin-bottom: 2rem;
+            gap: 1rem;
+        }
+
+        .filter-buttons {
+            grid-area: filters;
+        }
+
+        .search-box {
+            grid-area: search;
+        }
+
+        .refresh-btn {
+            grid-area: refresh;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .filter-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-light);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .search-box {
+            background: var(--glass-bg) !important;
+            border: 1px solid var(--glass-border);
+            border-radius: 2rem;
+            padding: 0.5rem 1rem;
+            color: var(--text);
+            width: 250px;
+            backdrop-filter: blur(10px);
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-lighter);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Prevent body background changes on focus */
+        body:has(.search-box:focus) {
+            background: 
+                linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%),
+                radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%) !important;
+        }
+
+        /* Prevent browser autofill background changes */
+        .search-box:-webkit-autofill,
+        .search-box:-webkit-autofill:hover,
+        .search-box:-webkit-autofill:focus,
+        .search-box:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 100px var(--glass-bg) inset !important;
+            -webkit-text-fill-color: var(--text) !important;
+            caret-color: var(--text);
+            background: var(--glass-bg) !important;
+            background-color: var(--glass-bg) !important;
+        }
+
+        /* Force consistent background during all states */
+        .search-box,
+        .search-box:focus,
+        .search-box:focus-within,
+        .search-box:active,
+        .search-box:hover,
+        .search-box:valid,
+        .search-box:invalid,
+        .search-box:placeholder-shown,
+        .search-box:not(:placeholder-shown) {
+            background: var(--glass-bg) !important;
+            -webkit-background-clip: padding-box !important;
+            background-clip: padding-box !important;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+            justify-content: center;
+        }
+
+        .article-card {
+            animation: fadeInUp 0.6s ease-out;
+            animation-fill-mode: both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Consistent staggered animation for all articles */
+        .article-card {
+            animation-delay: calc(var(--index, 0) * 0.1s);
+        }
+
+        .article-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .article-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .article-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .source-badge {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .save-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .save-btn.saved {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .save-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .article-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+            color: var(--text);
+        }
+
+        .article-summary {
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .article-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .article-date {
+            font-size: 0.85rem;
+            color: var(--text-lighter);
+        }
+
+        .read-more {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            white-space: nowrap;
+        }
+
+        .read-more:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .articles-grid.empty-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-light);
+            min-height: 400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        .empty-state p {
+            color: var(--text-lighter);
+        }
+
+        .skeleton-loader {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .skeleton-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .skeleton-line {
+            height: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .skeleton-line.short {
+            width: 60%;
+        }
+
+        .skeleton-line.medium {
+            width: 80%;
+        }
+
+        .skeleton-line.long {
+            width: 90%;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 0.3; }
+            100% { opacity: 0.6; }
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .debug-section {
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .debug-btn {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--text-light);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .debug-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .articles-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "filters"
+                    "search"
+                    "refresh";
+                gap: 1rem;
+            }
+            
+            .refresh-btn {
+                margin-top: 1rem;
+            }
+
+            .search-box {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI News Dashboard</h1>
+            <p>Latest AI articles from Ben's Bytes & The AI Rundown</p>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-number" id="total-articles">0</div>
+                <div class="stat-label">Total Articles</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="new-today">0</div>
+                <div class="stat-label">New Today</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="saved-count">0</div>
+                <div class="stat-label">Saved Articles</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="last-updated">-</div>
+                <div class="stat-label">Last Updated</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All Sources</button>
+                <button class="filter-btn" data-filter="bens_bites">Ben's Bytes</button>
+                <button class="filter-btn" data-filter="ai_rundown">AI Rundown</button>
+                <button class="filter-btn" data-filter="saved">Saved Only</button>
+            </div>
+            <input type="text" class="search-box" placeholder="Search articles..." id="search-input" autocomplete="off">
+            <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">🔄 Refresh Articles</button>
+        </div>
+
+        <div class="debug-section">
+            <button class="debug-btn" onclick="toggleDebug()">🔧 Debug</button>
+            <div id="debug-output" style="display: none; margin-top: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto;"></div>
+        </div>
+
+        <div class="articles-grid" id="articles-container">
+            <div class="skeleton-loader">
+                <div class="skeleton-card">
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line long"></div>
+                    <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line long"></div>
+                    <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line medium"></div>
+                    <div class="skeleton-line long"></div>
+                    <div class="skeleton-line short"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let articles = [];
+        let savedArticles = new Set();
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let debugEnabled = false;
+
+        // Debug functions
+        function debugLog(message) {
+            if (debugEnabled) {
+                const debugOutput = document.getElementById('debug-output');
+                if (debugOutput) {
+                    debugOutput.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+                    debugOutput.scrollTop = debugOutput.scrollHeight;
+                }
+            }
+            console.log(message);
+        }
+
+        function toggleDebug() {
+            debugEnabled = !debugEnabled;
+            const debugOutput = document.getElementById('debug-output');
+            const debugBtn = document.querySelector('.debug-btn');
+            
+            if (debugEnabled) {
+                debugOutput.style.display = 'block';
+                debugBtn.textContent = '🔧 Debug (ON)';
+                debugBtn.style.background = 'rgba(59, 130, 246, 0.3)';
+                debugBtn.style.borderColor = 'var(--primary)';
+                debugLog('Debug mode enabled');
+            } else {
+                debugOutput.style.display = 'none';
+                debugBtn.textContent = '🔧 Debug';
+                debugBtn.style.background = 'rgba(59, 130, 246, 0.1)';
+                debugBtn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+            }
+        }
+
+        async function testSupabaseConnection() {
+            debugLog('Testing Supabase connection...');
+            const supabaseUrl = window.SUPABASE_URL;
+            const supabaseKey = window.SUPABASE_ANON_KEY;
+            
+            if (!supabaseUrl || !supabaseKey) {
+                debugLog('❌ Supabase credentials not found in environment');
+                return false;
+            }
+            
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            
+            try {
+                const { data, error } = await supabase
+                    .from('articles')
+                    .select('*')
+                    .order('published_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) {
+                    debugLog(`❌ Supabase error: ${error.message}`);
+                    return false;
+                }
+                
+                if (data && data.length > 0) {
+                    debugLog(`✓ Supabase success: ${data.length} articles`);
+                    debugLog(`First article: ${data[0].title.substring(0, 50)}...`);
+                    debugLog(`First article date: ${data[0].published_at}`);
+                    
+                    // Test today count
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayCount = data.filter(article => 
+                        article.published_at.split('T')[0] === todayStr
+                    ).length;
+                    debugLog(`Articles from today: ${todayCount}`);
+                    return true;
+                } else {
+                    debugLog('Supabase returned no articles');
+                    return false;
+                }
+            } catch (error) {
+                debugLog(`❌ Supabase connection failed: ${error}`);
+                return false;
+            }
+        }
+
+        // Load saved articles from localStorage
+        function loadSavedArticles() {
+            const saved = localStorage.getItem('saved_articles');
+            if (saved) {
+                savedArticles = new Set(JSON.parse(saved));
+            }
+            return savedArticles;
+        }
+
+        // Save articles to localStorage
+        function saveArticlesToStorage() {
+            localStorage.setItem('saved_articles', JSON.stringify([...savedArticles]));
+        }
+
+        // Toggle save state
+        function toggleSave(articleId) {
+            if (savedArticles.has(articleId)) {
+                savedArticles.delete(articleId);
+            } else {
+                savedArticles.add(articleId);
+            }
+            saveArticlesToStorage();
+            
+            // Update the article's saved status in the articles array
+            const article = articles.find(a => a.id === articleId);
+            if (article) {
+                article.is_saved = savedArticles.has(articleId);
+            }
+            
+            renderArticles();
+            updateStats();
+        }
+
+        // Load articles - Supabase as primary source, local files as fallback
+        async function loadArticles() {
+            try {
+                debugLog('Starting article loading...');
+                
+                // Primary source: Supabase
+                debugLog('Loading from Supabase (primary source)...');
+                let loadedArticles = await loadFromSupabase();
+                
+                // Only fallback if Supabase fails or returns no articles
+                if (!loadedArticles) {
+                    debugLog('Supabase connection failed, falling back to local files...');
+                    loadedArticles = await loadFromApiOrFile();
+                } else if (loadedArticles.length === 0) {
+                    console.log('Supabase is empty, falling back to local files...');
+                    loadedArticles = await loadFromApiOrFile();
+                } else {
+                    console.log(`✓ Successfully loaded ${loadedArticles.length} articles from Supabase`);
+                }
+                
+                if (loadedArticles && loadedArticles.length > 0) {
+                    articles = loadedArticles;
+                    console.log(`Final article count: ${articles.length}`);
+                    
+                    // Update saved status based on localStorage
+                    articles.forEach(article => {
+                        article.is_saved = savedArticles.has(article.id);
+                    });
+                    
+                    renderArticles();
+                    updateStats();
+                } else {
+                    throw new Error('No articles available from any source');
+                }
+            } catch (error) {
+                console.error('Error loading articles:', error);
+                document.getElementById('articles-container').innerHTML = 
+                    '<div class="empty-state"><h3>Error loading articles</h3><p>Please try refreshing the page</p></div>';
+            }
+        }
+
+        // Load articles from Supabase
+        async function loadFromSupabase() {
+            try {
+                // Get Supabase credentials from environment or use defaults
+                const supabaseUrl = window.SUPABASE_URL;
+                const supabaseKey = window.SUPABASE_ANON_KEY;
+                
+                if (!supabaseKey) {
+                    debugLog('No Supabase API key provided, skipping Supabase connection');
+                    return null;
+                }
+                
+                debugLog(`Connecting to Supabase: ${supabaseUrl}`);
+                const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                
+                // Add timeout for Supabase request
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Supabase request timeout')), 10000)
+                );
+                
+                const supabasePromise = supabase
+                    .from('articles')
+                    .select('*')
+                    .order('published_at', { ascending: false });
+                
+                const { data, error } = await Promise.race([supabasePromise, timeoutPromise]);
+                
+                if (error) {
+                    console.error('Supabase error:', error);
+                    // Check if it's a CORS error
+                    if (error.message.includes('CORS') || error.message.includes('Origin')) {
+                        console.log('CORS error detected - Supabase may not be configured for localhost');
+                    }
+                    return null;
+                }
+                
+                if (data && data.length > 0) {
+                    debugLog(`✓ Loaded ${data.length} articles from Supabase`);
+                    debugLog(`First article date: ${data[0]?.published_at}`);
+                    
+                    // Transform Supabase data to match our expected format
+                    return data.map(article => ({
+                        id: article.id,
+                        title: article.title,
+                        source: article.source,
+                        url: article.url,
+                        summary: article.subtitle || article.summary || '',
+                        published_at: article.published_at,
+                        category: article.category || 'AI News',
+                        author: article.author || 'Unknown',
+                        image_url: article.image_url || '',
+                        is_saved: false // Will be updated from localStorage
+                    }));
+                }
+                
+                return null;
+            } catch (error) {
+                debugLog(`❌ Supabase connection failed: ${error}`);
+                return null;
+            }
+        }
+
+        // Fallback: Load articles from API or JSON file
+        async function loadFromApiOrFile() {
+            try {
+                let response;
+                try {
+                    response = await fetch('/api/articles');
+                    if (!response.ok) throw new Error('API failed');
+                } catch {
+                    // Fallback to direct file access
+                    response = await fetch('.tmp/processed_articles.json');
+                }
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load articles');
+                }
+                
+                const data = await response.json();
+                debugLog(`✓ Loaded ${data.length} articles from fallback source`);
+                if (data.length > 0) {
+                    debugLog(`First fallback article date: ${data[0]?.published_at}`);
+                }
+                return data;
+            } catch (error) {
+                debugLog(`Fallback loading failed: ${error}`);
+                return null;
+            }
+        }
+
+        // Render articles based on current filter and search
+        function renderArticles() {
+            const container = document.getElementById('articles-container');
+            
+            let filteredArticles = articles.filter(article => {
+                // Apply filter
+                if (currentFilter === 'saved' && !article.is_saved) return false;
+                if (currentFilter !== 'all' && currentFilter !== 'saved' && article.source !== currentFilter) return false;
+                
+                // Apply search
+                if (searchQuery) {
+                    const query = searchQuery.toLowerCase();
+                    return article.title.toLowerCase().includes(query) || 
+                           article.summary.toLowerCase().includes(query);
+                }
+                
+                return true;
+            });
+
+            if (filteredArticles.length === 0) {
+                container.classList.add('empty-container');
+                container.innerHTML = '<div class="empty-state"><h3>No articles found</h3><p>Try changing your filters or search terms</p></div>';
+                return;
+            } else {
+                container.classList.remove('empty-container');
+            }
+
+            container.innerHTML = filteredArticles.map((article, index) => `
+                <div class="article-card" style="--index: ${index};">
+                    <div class="article-header">
+                        <span class="source-badge">${formatSource(article.source)}</span>
+                        <button class="save-btn ${article.is_saved ? 'saved' : ''}" 
+                                onclick="toggleSave('${article.id}')">
+                            ${article.is_saved ? '❤️' : '🤍'}
+                        </button>
+                    </div>
+                    <h3 class="article-title">${article.title}</h3>
+                    <p class="article-summary">${article.summary}</p>
+                    <div class="article-footer">
+                        <span class="article-date">${formatDate(article.published_at)} • ${article.author}</span>
+                        <a href="${article.url}" target="_blank" class="read-more">Read More</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats() {
+            // Simple date string comparison (YYYY-MM-DD)
+            const todayStr = new Date().toISOString().split('T')[0];
+            debugLog(`Today date string: ${todayStr}`);
+            debugLog(`Total articles: ${articles.length}`);
+            
+            const todayArticles = articles.filter(article => {
+                try {
+                    const articleDateStr = article.published_at.split('T')[0];
+                    const isToday = articleDateStr === todayStr;
+                    if (isToday) {
+                        debugLog(`Today article: ${article.title.substring(0, 40)}`);
+                    }
+                    return isToday;
+                } catch {
+                    return false;
+                }
+            });
+
+            document.getElementById('total-articles').textContent = articles.length;
+            document.getElementById('new-today').textContent = todayArticles.length;
+            document.getElementById('saved-count').textContent = savedArticles.size;
+            
+            // Show actual timestamp for last updated
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('last-updated').textContent = timeStr;
+        }
+
+        // Format source name
+        function formatSource(source) {
+            return source === 'bens_bites' ? "Ben's Bytes" : "AI Rundown";
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        // Refresh data by running the pipeline
+        async function refreshData() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running Pipeline...';
+            
+            try {
+                // Show loading state
+                document.getElementById('articles-container').innerHTML = `
+                    <div class="skeleton-loader">
+                        <div class="skeleton-card">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line medium"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line medium"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line medium"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line short"></div>
+                        </div>
+                    </div>
+                `;
+                
+                // Call the pipeline API
+                const response = await fetch('/api/refresh');
+                if (!response.ok) {
+                    throw new Error('Refresh failed');
+                }
+                
+                // Wait a bit for pipeline to complete
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Reload articles
+                await loadArticles();
+                
+                btn.textContent = '✅ Refreshed!';
+                setTimeout(() => {
+                    btn.textContent = '🔄 Refresh Articles';
+                    btn.disabled = false;
+                }, 2000);
+            } catch (error) {
+                debugLog(`❌ Error refreshing: ${error}`);
+                btn.textContent = '❌ Error';
+                setTimeout(() => {
+                    btn.textContent = '🔄 Refresh Articles';
+                    btn.disabled = false;
+                }, 2000);
+            }
+        }
+        
+        // Auto-refresh on page load
+        function autoRefreshOnLoad() {
+            const lastRefresh = localStorage.getItem('last_refresh');
+            const now = Date.now();
+            const refreshInterval = 24 * 60 * 60 * 1000; // 24 hours
+            
+            if (!lastRefresh || (now - parseInt(lastRefresh)) > refreshInterval) {
+                // It's been more than 24 hours, run refresh
+                refreshData();
+                localStorage.setItem('last_refresh', now.toString());
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedArticles();
+            
+            // Auto-refresh if needed
+            autoRefreshOnLoad();
+            
+            // Load articles (will be called by autoRefreshOnLoad if needed)
+            loadArticles();
+            
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    
+                    renderArticles();
+                });
+            });
+
+            // Search input
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                renderArticles();
+            });
+        });
+    </script>
+</body>
+</html>
