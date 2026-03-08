@@ -425,6 +425,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            height: 400px;
         }
 
         .empty-state {
@@ -664,10 +665,11 @@
             <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">🔄 Refresh Articles</button>
         </div>
 
-        <div class="debug-section">
+        <!-- Debug section removed for production -->
+        <!-- <div class="debug-section">
             <button class="debug-btn" onclick="toggleDebug()">🔧 Debug</button>
             <div id="debug-output" style="display: none; margin-top: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto;"></div>
-        </div>
+        </div> -->
 
         <div class="articles-grid" id="articles-container">
             <div class="skeleton-loader">
@@ -1067,14 +1069,19 @@
                     </div>
                 `;
                 
-                // Call the pipeline API
-                const response = await fetch('/api/refresh');
-                if (!response.ok) {
-                    throw new Error('Refresh failed');
+                // Try to call the pipeline API (may not work on Vercel)
+                try {
+                    const response = await fetch('/api/refresh');
+                    if (!response.ok) {
+                        throw new Error('API refresh failed');
+                    }
+                    
+                    // Wait a bit for pipeline to complete
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                } catch {
+                    // Fallback: just reload articles from Supabase
+                    console.log('API refresh not available, reloading articles directly');
                 }
-                
-                // Wait a bit for pipeline to complete
-                await new Promise(resolve => setTimeout(resolve, 3000));
                 
                 // Reload articles
                 await loadArticles();
@@ -1085,8 +1092,8 @@
                     btn.disabled = false;
                 }, 2000);
             } catch (error) {
-                debugLog(`❌ Error refreshing: ${error}`);
-                btn.textContent = '❌ Error';
+                console.log(`Refresh error: ${error}`);
+                btn.textContent = '🔄 Try Again';
                 setTimeout(() => {
                     btn.textContent = '🔄 Refresh Articles';
                     btn.disabled = false;
