@@ -627,14 +627,7 @@
         }
     </style>
     <script>
-        // Set Supabase credentials from environment variables
-        // On Vercel, these should be set as environment variables
-        // Fallback to hardcoded values for testing
-        window.SUPABASE_URL = 'https://keajnbcsqgyfgyikvbca.supabase.co';
-        window.SUPABASE_ANON_KEY = 'sb_publishable_tUM51WsQtzlmiiLABjCnBw_N3HeE0ay';
-        
-        console.log('Supabase URL:', window.SUPABASE_URL);
-        console.log('Supabase Key available:', !!window.SUPABASE_ANON_KEY);
+        console.log('AI News Dashboard starting...');
     </script>
 </head>
 <body>
@@ -889,59 +882,29 @@
             }
         }
 
-        // Load articles from Supabase using direct REST API only
+        // Load articles from local API proxy (which connects to Supabase server-side)
         async function loadFromSupabase() {
             try {
-                // Get Supabase credentials from environment or use defaults
-                const supabaseUrl = window.SUPABASE_URL;
-                const supabaseKey = window.SUPABASE_ANON_KEY;
+                debugLog('Loading articles from local API proxy...');
                 
-                if (!supabaseKey) {
-                    debugLog('No Supabase API key provided, skipping Supabase connection');
-                    // Show error to user
-                    showError('Supabase API key not configured. Please check environment variables.');
-                    return null;
-                }
-                
-                debugLog(`Connecting to Supabase via REST API: ${supabaseUrl}`);
-                
-                // Use direct REST API call (most reliable)
-                const response = await fetch(`${supabaseUrl}/rest/v1/articles?select=*&order=published_at.desc`, {
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+                // Call local Vercel API function (solves CORB issues)
+                const response = await fetch('/api/articles');
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    debugLog(`✓ Loaded ${data.length} articles via REST API`);
-                    if (data.length > 0) {
-                        debugLog(`First article date: ${data[0]?.published_at}`);
+                    const result = await response.json();
+                    debugLog(`✓ Loaded ${result.articles.length} articles via API proxy`);
+                    if (result.articles.length > 0) {
+                        debugLog(`First article date: ${result.articles[0]?.published_at}`);
                     }
-                    
-                    // Transform Supabase data to match our expected format
-                    return data.map(article => ({
-                        id: article.id,
-                        title: article.title,
-                        source: article.source,
-                        url: article.url,
-                        summary: article.subtitle || article.summary || '',
-                        published_at: article.published_at,
-                        category: article.category || 'AI News',
-                        author: article.author || 'Unknown',
-                        image_url: article.image_url || '',
-                        is_saved: false // Will be updated from localStorage
-                    }));
+                    return result.articles;
                 } else {
-                    debugLog(`REST API failed: ${response.status} ${response.statusText}`);
-                    showError(`Supabase connection failed: ${response.status} ${response.statusText}`);
+                    debugLog(`API proxy failed: ${response.status} ${response.statusText}`);
+                    showError(`API connection failed: ${response.status} ${response.statusText}`);
                     return null;
                 }
             } catch (error) {
-                debugLog(`❌ Supabase connection failed: ${error}`);
-                showError(`Supabase connection failed: ${error.message}`);
+                debugLog(`❌ API proxy failed: ${error}`);
+                showError(`Failed to connect to API: ${error.message}`);
                 return null;
             }
         }
