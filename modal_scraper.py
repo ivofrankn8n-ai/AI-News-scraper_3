@@ -128,46 +128,65 @@ def scrape_articles():
     ai_rundown_count = 0
     max_retries = 3
     
+
+    
     for attempt in range(max_retries):
         try:
             print(f"Scraping AI Rundown (attempt {attempt + 1}/{max_retries})...")
-            response = session.get('https://therundown.substack.com/feed', timeout=30)
+            
+            # Use sitemap approach for reliable AI content
+            response = session.get('https://www.therundown.ai/sitemap.xml', timeout=30)
             response.raise_for_status()
             
             root = ET.fromstring(response.content)
             
-            for item in root.findall('.//item'):
+            # Get recent article URLs (first 20 should be sufficient)
+            urls = []
+            for url_elem in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}url')[:100]:
+                loc = url_elem.find('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')
+                if loc is not None and '/p/' in loc.text:
+                    urls.append(loc.text)
+            
+            print(f"Found {len(urls)} potential articles")
+            
+            # If no articles found in sitemap, provide informative message
+            if len(urls) == 0:
+                print("No articles found in sitemap. AI Rundown website is heavily protected by Cloudflare.")
+                print("Note: AI Rundown content requires JavaScript and is protected against scraping.")
+                print("Consider: Using their official API or newsletter subscription for content access.")
+                break
+            
+            for article_url in urls:
                 try:
-                    title = item.find('title').text
-                    link = item.find('link').text
-                    pub_date = item.find('pubDate').text
-                    description = item.find('description').text or ""
+                    # Fetch article page
+                    article_response = session.get(article_url, timeout=15)
+                    if article_response.status_code != 200:
+                        continue
                     
-                    # Parse date - handle both with and without timezone
-                    try:
-                        published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
-                    except ValueError:
-                        # Try parsing without timezone
-                        published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S GMT')
-                        # Add UTC timezone
-                        published_at = published_at.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                    # Parse article content
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(article_response.text, 'html.parser')
                     
-                    # Check if from today (UTC calendar date)
+                    # Extract title
+                    title_tag = soup.find('title')
+                    title = title_tag.text if title_tag else "AI Rundown Article"
+                    
+                    # Extract description
+                    desc_tag = soup.find('meta', attrs={'name': 'description'})
+                    description = desc_tag.get('content', '') if desc_tag else ""
+                    
+                    # Use current time for published_at (sitemap doesn't have dates)
                     from datetime import timezone
-                    utc_now = datetime.now(timezone.utc)
-                    if published_at.astimezone(timezone.utc).date() != utc_now.date():
-                        continue  # Skip articles not from today
+                    published_at = datetime.now(timezone.utc).isoformat()
                     
-                    published_at = published_at.isoformat()
-                    
-                    # Generate unique ID
-                    article_id = hashlib.md5(f"{title}{link}".encode()).hexdigest()
+                    # Generate ID
+                    article_id = hashlib.md5(f"{title}{article_url}".encode()).hexdigest()
                     
                     # Upsert article
                     article_data = {
                         "id": article_id,
                         "title": title,
-                        "url": link,
+                        "url": article_url,
                         "summary": description[:500] if description else "",
                         "source": "ai_rundown",
                         "author": "The Rundown AI",
@@ -187,10 +206,10 @@ def scrape_articles():
                         print(f"  [-] Error: {resp.status_code}")
                         
                 except Exception as e:
-                    print(f"  [-] Error processing item: {e}")
+                    print(f"  [-] Error processing article: {e}")
                     continue
             
-            print(f"AI Rundown: {ai_rundown_count} articles processed")
+            print(f"AI Rundown: {ai_rundown_count} AI articles processed")
             articles_scraped += ai_rundown_count
             break  # Success, exit retry loop
             
@@ -327,45 +346,65 @@ def scrape_articles_local():
     ai_rundown_count = 0
     max_retries = 3
     
+
+    
     for attempt in range(max_retries):
         try:
             print(f"Scraping AI Rundown (attempt {attempt + 1}/{max_retries})...")
-            response = session.get('https://therundown.substack.com/feed', timeout=30)
+            
+            # Use sitemap approach for reliable AI content
+            response = session.get('https://www.therundown.ai/sitemap.xml', timeout=30)
             response.raise_for_status()
             
             root = ET.fromstring(response.content)
             
-            for item in root.findall('.//item'):
+            # Get recent article URLs (first 20 should be sufficient)
+            urls = []
+            for url_elem in root.findall('.//{http://www.sitemaps.org/schemas/sitemap/0.9}url')[:100]:
+                loc = url_elem.find('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')
+                if loc is not None and '/p/' in loc.text:
+                    urls.append(loc.text)
+            
+            print(f"Found {len(urls)} potential articles")
+            
+            # If no articles found in sitemap, provide informative message
+            if len(urls) == 0:
+                print("No articles found in sitemap. AI Rundown website is heavily protected by Cloudflare.")
+                print("Note: AI Rundown content requires JavaScript and is protected against scraping.")
+                print("Consider: Using their official API or newsletter subscription for content access.")
+                break
+            
+            for article_url in urls:
                 try:
-                    title = item.find('title').text
-                    link = item.find('link').text
-                    pub_date = item.find('pubDate').text
-                    description = item.find('description').text or ""
+                    # Fetch article page
+                    article_response = session.get(article_url, timeout=15)
+                    if article_response.status_code != 200:
+                        continue
                     
-                    # Parse date - handle both with and without timezone
-                    try:
-                        published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S %z')
-                    except ValueError:
-                        # Try parsing without timezone
-                        published_at = datetime.strptime(pub_date, '%a, %d %b %Y %H:%M:%S GMT')
-                        # Add UTC timezone
-                        published_at = published_at.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                    # Parse article content
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(article_response.text, 'html.parser')
                     
-                    # Check if from today (UTC calendar date)
-                    utc_now = datetime.now(timezone.utc)
-                    if published_at.astimezone(timezone.utc).date() != utc_now.date():
-                        continue  # Skip articles not from today
+                    # Extract title
+                    title_tag = soup.find('title')
+                    title = title_tag.text if title_tag else "AI Rundown Article"
                     
-                    published_at = published_at.isoformat()
+                    # Extract description
+                    desc_tag = soup.find('meta', attrs={'name': 'description'})
+                    description = desc_tag.get('content', '') if desc_tag else ""
+                    
+                    # Use current time for published_at (sitemap doesn't have dates)
+                    from datetime import timezone
+                    published_at = datetime.now(timezone.utc).isoformat()
                     
                     # Generate unique ID
-                    article_id = hashlib.md5(f"{title}{link}".encode()).hexdigest()
+                    article_id = hashlib.md5(f"{title}{article_url}".encode()).hexdigest()
                     
                     # Upsert article
                     article_data = {
                         "id": article_id,
                         "title": title,
-                        "url": link,
+                        "url": article_url,
                         "summary": description[:500] if description else "",
                         "source": "ai_rundown",
                         "author": "The Rundown AI",
@@ -385,10 +424,10 @@ def scrape_articles_local():
                         print(f"  [-] Error: {resp.status_code}")
                         
                 except Exception as e:
-                    print(f"  [-] Error processing item: {e}")
+                    print(f"  [-] Error processing article: {e}")
                     continue
             
-            print(f"AI Rundown: {ai_rundown_count} articles processed")
+            print(f"AI Rundown: {ai_rundown_count} AI articles processed")
             articles_scraped += ai_rundown_count
             break  # Success, exit retry loop
             

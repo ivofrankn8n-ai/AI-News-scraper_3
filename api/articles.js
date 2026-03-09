@@ -73,10 +73,6 @@ module.exports = async (req, res) => {
         const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString();
         dateFilter = `published_at=gte.${oneYearAgo}`;
         break;
-      case 'today':
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-        dateFilter = `published_at=gte.${todayStart}`;
-        break;
       case 'all':
       default:
         dateFilter = ''; // No filter
